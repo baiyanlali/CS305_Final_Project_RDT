@@ -35,7 +35,7 @@ class RDTSocket(UnreliableSocket):
         #                             END OF YOUR CODE                              #
         #############################################################################
 
-    def accept(self) -> ('RDTSocket', (str, int)):  # 被动接受TCP客户端连接,非阻塞式等待连接的到来
+    def accept(self) -> ('RDTSocket', (str, int)):  # sever端，被动接受client端连接,非阻塞式等待连接的到来
         """
         Accept a connection. The socket must be bound to an address and listening for
         connections. The return value is a pair (conn, address) where conn is a new
@@ -54,13 +54,13 @@ class RDTSocket(UnreliableSocket):
             if data_client.syn == 1:
                 self.recvSin = True
                 self.ackNum = data_client.seqNumber + 1
-            conn.sendto(segment(sin=1, ack=1, ackNumber=self.ackNum), addr_client)
+            conn.sendto(segment(sin=1, ack=1, ackNumber=self.ackNum).getSegment(), addr_client)
             while True:
                 data_client2, addr_client2 = self.recvfrom(1024)
                 data_client2 = segment.parse(data_client2)
                 if data_client2.syn == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:
                     conn.connectAddr = addr_client
-                    conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1), addr_client)
+                    conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
                     self.__init__()
                     break
             break
@@ -70,7 +70,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         return conn, addr
 
-    def connect(self, address: (str, int)):  # 主动初始化TCP服务器连接，。一般address的格式为元组（hostname,port），如果连接出错，返回socket.error错误。
+    def connect(self, address: (str, int)):  # client端 ，主动初始化TCP服务器连接，一般address的格式为元组（hostname,port），如果连接出错，返回socket.error错误。
         """
         Connect to a remote socket at address.
         Corresponds to the process of establishing a connection on the client side.
@@ -78,6 +78,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+        
         self._send_to(segment(sin=1).getSegment())
         self._recv_from(1024)
         #############################################################################
