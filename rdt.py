@@ -26,10 +26,10 @@ class RDTSocket(UnreliableSocket):
         self.debug = debug
         #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
-        self.segment=None
-        self.port=None
-        self.dstIP=None
-        self.timeout=None
+        self.segment = None
+        self.port = None
+        self.dstIP = None
+        self.timeout = None
         #############################################################################
 
         #############################################################################
@@ -89,12 +89,11 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         return data
 
-    def recvfrom(self, bufsize) ->bytes:
+    def recvfrom(self, bufsize) -> bytes:
         pass
 
     def settimeout(self, value):
         pass
-
 
     def send(self, bytes: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
         """
@@ -180,4 +179,6 @@ class segment:  # 定义传输报文的格式
         return s.encode()
 
     def getSegment(self) -> bytes:  # 将整个报文转换为bytes
-        byte = self.getFlag() + self.seqNumber.to_bytes() + self.ackNumber.to_bytes() + self.length.to_bytes() + self.checksum.to_bytes() + self.payloadToByte()
+        byte = self.getFlag() + self.seqNumber.to_bytes(4, 'big') + self.ackNumber.to_bytes(4,
+                                                                                            'big') + self.length.to_bytes(
+            4, 'big') + self.checksum.to_bytes(2, 'big') + self.payloadToByte()
