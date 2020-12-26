@@ -30,15 +30,25 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         self.recvSin = False  # 表示是否收到建立连接的请求
         self.ackNum = 0  # 表示下一个想要的包的信号
+        self.seqNum = 0  # 表示下一个要发的包的信号
         self.connectAddr = None  # 表示与这个socket相连的ip地址
         self.recvSin = False  # 表示是否收到建立连接的请求
-        self.ackNum = 0  # 表示下一个想要的包的信号
 
-        self.IPdst = ''  # 建立连接后终点IP地址
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
+
+    def reset(self):
+        """
+        将socket的状态还原
+        """
+        self.recvSin = False
+        self.ackNum = 0
+        self.connectAddr = None
+        self.recvSin = False
+
+        self.status = []
 
     def accept(self) -> ('RDTSocket', (str, int)):  # sever端，被动接受client端连接,非阻塞式等待连接的到来
         """
@@ -56,17 +66,17 @@ class RDTSocket(UnreliableSocket):
         while True:
             data_client, addr_client = self.recvfrom(1024)
             data_client = segment.parse(data_client)  # 将受到的数据解码
-            if data_client.syn == 1:
+            if data_client.syn == 1:  # 收到连接请求
                 self.recvSin = True
                 self.ackNum = data_client.seqNumber + 1
-            conn.sendto(segment(sin=1, ack=1, ackNumber=self.ackNum).getSegment(), addr_client)
+            conn.sendto(segment(sin=1, ack=1, ackNumber=self.ackNum).getSegment(), addr_client)  # 发sin ack
             while True:
                 data_client2, addr_client2 = self.recvfrom(1024)
                 data_client2 = segment.parse(data_client2)
-                if data_client2.syn == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:
-                    conn.connectAddr = addr_client
-                    conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
-                    self.__init__()
+                if data_client2.syn == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:  # 收到了原来的地址发来的正确报文
+                    conn.connectAddr = addr_client  # 建立连接
+                    # conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
+                    self.reset()  # 重置socket
                     break
             break
         return conn, addr_client
@@ -75,7 +85,8 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         return conn, addr
 
-    def connect(self, address: (str, int)):  # client端 ，主动初始化TCP服务器连接，一般address的格式为元组（hostname,port），如果连接出错，返回socket.error错误。
+    def connect(self, address: (str, int)):  # client端 ，主动初始化TCP服务器连接，一般address的格式为元组（hostname,
+        # port），如果连接出错，返回socket.error错误。
         """
         Connect to a remote socket at address.
         Corresponds to the process of establishing a connection on the client side.
@@ -83,9 +94,15 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        
-        self._send_to(segment(sin=1).getSegment())
-        self._recv_from(1024)
+        self.connectAddr = address
+        self.sendto(segment(sin=1).getSegment(), self.connectAddr)  # 发送请求连接报文
+        data_sever, addr_sever = self.recvfrom(1024)
+        data_sever = segment.parse(data_sever)
+        if data_sever.ack == 1 and data_sever.sin == 1 and addr_sever == self.connectAddr:
+            self.seqNum = 1
+            self.ackNum = data_sever.seqNumber + 1
+            self.sendto(segment(sin=1, ack=1, seqNumber=self.seqNum, ackNumber=self.ackNum).getSegment(),
+                        self.connectAddr)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -121,9 +138,9 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
         if 'connect' in self.status:
-            seqNumber=0
-            pieces=1000
-            segment(seqNumber=seqNumber,)
+            seqNumber = 0
+            pieces = 1000
+            segment(seqNumber=seqNumber, )
             segment()
             self.status.remove('connect')
             self.sendto(bytes, self.IPdst)
@@ -162,6 +179,3 @@ class RDTSocket(UnreliableSocket):
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
 
 """
-
-
-
