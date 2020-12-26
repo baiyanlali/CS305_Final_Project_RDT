@@ -140,7 +140,15 @@ class RDTSocket(UnreliableSocket):
         if 'connect' in self.status:
             seqNumber = 0
             pieces = 1000
-            segment(seqNumber=seqNumber, )
+            seg = segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
+            self._send_to(seg+bytes,self.connectAddr)
+            while seqNumber + pieces < len(bytes):
+
+                buffer = self._recv_from(1024)
+                head=
+            # 如果目前为连接状态，则发送数据，将发送的数据进行切片
+
+            segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
             segment()
             self.status.remove('connect')
             self.sendto(bytes, self.IPdst)
@@ -157,12 +165,15 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
         # initiative close
-        self._send_to(segment(fin=1).getSegment())
-        self._recv_from(1024)
-        self._recv_from(1024)
-        self._send_to(segment(ack=1).getSegment())
+        if 'client' in self.status:
+            self._send_to(segment(fin=1).getSegment())
+            self._recv_from(1024)
+            self._recv_from(1024)
+            self._send_to(segment(ack=1).getSegment())
         # passivity close
-
+        else:
+            # TODO: passivity close
+            pass
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -179,3 +190,6 @@ class RDTSocket(UnreliableSocket):
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
 
 """
+
+
+

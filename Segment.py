@@ -5,6 +5,7 @@ class segment:  # 定义传输报文的格式
     [5:8] ackNumber  32bit，表示想要收到的包的序号,4bytes
     [9:12] Length  32bit,表示payload的长度，单位byte，不包括报文头,4bytes
     [13:14] checksum 16bit,校验和,2bytes
+    表头共长为：116bit(4bit+112bit)
     """
 
     def __init__(self, sin=0, fin=0, ack=0, rst=0, seqNumber=0, ackNumber=0, length=0, checkSum=0, payload=''):  # 初始化报文
@@ -16,37 +17,40 @@ class segment:  # 定义传输报文的格式
         self.seqNumber = seqNumber
         self.ackNumber = ackNumber
 
-
         # self.checksum = checkSum
 
-
-        self.getChecksum()
         self.payload = payload
         self.length = len(payload.encode())
+        self.getChecksum()
 
     def getLength(self):  # 求payload的长度
         self.length = len(self.payload)
 
     def getFlag(self) -> bytes:  # 将sin，fin,ack,rst打包成一个byte
         s = str(self.sin) + str(self.fin) + str(self.ack) + str(self.rst)
-        return s.encode()
+        return s.encode("UTF-8")
+        # return i.to_bytes(1,byteorder='little')
 
     @staticmethod
     def getFlagStatic(sin=0, fin=0, ack=0, rst=0):
         s = str(sin) + str(fin) + str(ack) + str(rst)
-        return s.encode()
+        return s.encode("UTF-8")
 
     def getChecksum(self) -> int:  # 求checksum
         s = self.getFlag() + self.seqNumber.to_bytes(4, byteorder='little') + \
-               self.ackNumber.to_bytes(4, byteorder='little') + \
-               self.length.to_bytes(4, byteorder='little') + \
-               self.payloadToByte()
+            self.ackNumber.to_bytes(4, byteorder='little') + \
+            self.length.to_bytes(4, byteorder='little') + \
+            self.payloadToByte()
         checksum = 0
         for i in s:
             checksum += i
         checksum = checksum % 4294967296
         self.checksum = checksum
         return checksum
+
+    @staticmethod
+    def Checksum()->bool:
+
 
     def payloadToByte(self) -> bytes:  # 将payload转换成bytes
         s = self.payload
@@ -86,10 +90,10 @@ class segment:  # 定义传输报文的格式
 
     @staticmethod
     def parse(data: bytes) -> 'segment':
-        sin = data[0]-48
-        fin = data[1]-48
-        ack = data[2]-48
-        rst = data[3]-48
+        sin = data[0] - 48
+        fin = data[1] - 48
+        ack = data[2] - 48
+        rst = data[3] - 48
 
         seqNumber = int().from_bytes(data[4:8], byteorder='little')
         ackNumber = int().from_bytes(data[8:12], byteorder='little')
@@ -100,15 +104,18 @@ class segment:  # 定义传输报文的格式
         payload = bytes.decode(data[18:])
         # payload = ''
         return segment(sin=sin, fin=fin, ack=ack, rst=rst, seqNumber=seqNumber,
-                       ackNumber=ackNumber, length=length,checkSum=checksum,
+                       ackNumber=ackNumber, length=length, checkSum=checksum,
                        payload=payload)
 
 
 if __name__ == "__main__":
-    data = segment(sin=0, fin=1, ack=0, rst=1, seqNumber=1024, ackNumber=1008, length=2020,payload="asdlfjasdflasjdf;lsadfjh")
+    data = segment(sin=0, fin=1, ack=0, rst=1, seqNumber=1024, ackNumber=1008, length=2020,
+                   payload="asdlfjasdflasjdf;lsadfjh")
 
     data.getChecksum()
     dddd = data.getSegment()
     print(dddd)
     data_recv = segment.parse(dddd)
     print(data_recv.getSegment())
+    for i in data_recv.getSegment():
+        print(i)
