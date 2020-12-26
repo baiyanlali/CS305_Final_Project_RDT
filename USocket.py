@@ -30,7 +30,8 @@ def get_sendto(id, rate=None):
 class UnreliableSocket:
     def __init__(self, rate=None):
         assert rate == None or rate > 0, 'Rate should be positive or None.'
-        sockets[id(self)] = socket(AF_INET, SOCK_DGRAM)
+        sockets[id(self)] = socket(AF_INET, SOCK_DGRAM)  # type:socket
+
         self.sendto = get_sendto(id(self), rate)
 
     def bind(self, address: (str, int)):

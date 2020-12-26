@@ -64,9 +64,11 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
         while True:
+            print("----- Server start listening -------")
             data_client, addr_client = self.recvfrom(1024)
+            print("----- Server received -------")
             data_client = segment.parse(data_client)  # 将受到的数据解码
-            if data_client.syn == 1:  # 收到连接请求
+            if data_client.sin == 1:  # 收到连接请求
                 self.recvSin = True
                 self.ackNum = data_client.seqNumber + 1
                 print("receive connection request!")
@@ -75,7 +77,7 @@ class RDTSocket(UnreliableSocket):
             while True:
                 data_client2, addr_client2 = self.recvfrom(1024)
                 data_client2 = segment.parse(data_client2)
-                if data_client2.syn == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:  # 收到了原来的地址发来的正确报文
+                if data_client2.sin == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:  # 收到了原来的地址发来的正确报文
                     conn.connectAddr = addr_client  # 建立连接
                     print("connection established")
                     # conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
@@ -101,6 +103,7 @@ class RDTSocket(UnreliableSocket):
         self.sendto(segment(sin=1).getSegment(), self.connectAddr)  # 发送请求连接报文
         print("send connect request")
         data_sever, addr_sever = self.recvfrom(1024)
+        print("receive!")
         data_sever = segment.parse(data_sever)
         if data_sever.ack == 1 and data_sever.sin == 1 and addr_sever == self.connectAddr:
             print("received ack")
