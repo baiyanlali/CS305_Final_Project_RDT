@@ -26,10 +26,13 @@ class RDTSocket(UnreliableSocket):
         self.debug = debug
         #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
-        self.segment=None
-        self.port=None
-        self.dstIP=None
-        self.timeout=None
+
+        self.segment = None
+        self.port = None
+        self.dstIP = None
+        self.timeout = None
+        self.status={}
+        self.isClient=None
         #############################################################################
 
         #############################################################################
@@ -49,6 +52,12 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+        data_client,addr_client=self.recvfrom()
+        client = RDTSocket()
+        client.isClient=False
+        client.bind(('localhost',10086))
+        client.sendto()
+
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -63,7 +72,9 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        raise NotImplementedError()
+        self._send_to(b'syn')
+        self._recv_from(1024)
+        self._send_to(b'ack')
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -89,13 +100,6 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         return data
 
-    def recvfrom(self, bufsize) ->bytes:
-        pass
-
-    def settimeout(self, value):
-        pass
-
-
     def send(self, bytes: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
         """
         Send data to the socket.
@@ -118,6 +122,12 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+        # initiative close
+        self._send_to(b'fin')
+        self._recv_from(1024)
+        self._recv_from(1024)
+        self._send_to(b'ack')
+        # passivity close
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -137,6 +147,7 @@ You can define additional functions and classes to do thing such as packing/unpa
 """
 
 
+
 class segment:  # 定义传输报文的格式
     """
     [0] sin,fin,ack,rst 1bit,建立连接请求标志,1代表请求建立连接;1bit,结束连接请求标志，1代表请求结束连接;1bit,1表示收到请求，包括sin和fin;rst为1bit，表示请求重新建立连接
@@ -146,25 +157,30 @@ class segment:  # 定义传输报文的格式
     [13:14] checksum 16bit,校验和
     """
 
-    def __init__(self):  # 初始化报文
-        self.sin = 0
-        self.fin = 0
-        self.ack = 0
-        self.rst = 0
+    def __init__(self,sin=0,fin=0,ack=0,rst=0,seqNumber=0,ackNumber=0,length=0,checkSum=0,payload=''):  # 初始化报文
+        self.sin = sin
+        self.fin = fin
+        self.ack = ack
+        self.rst = rst
 
-        self.seqNumber = 0
-        self.ackNumber = 0
+        self.seqNumber = seqNumber
+        self.ackNumber = ackNumber
 
-        self.length = 0
-        self.checksum = 0
+        self.length = length
+        self.checksum = checkSum
 
-        self.payload = ''
+        self.payload = payload
 
     def getLength(self):  # 求payload的长度
         self.length = len(self.payload)
 
     def getFlag(self) -> bytes:  # 将sin，fin,ack,rst打包成一个byte
         s = str(self.sin) + str(self.fin) + str(self.ack) + str(self.rst) + "0000"
+        return s.encode()
+
+    @staticmethod
+    def getFlag(sin=0,fin=0,ack=0,rst=0):
+        s = str(sin) + str(fin) + str(ack) + str(rst) + "0000"
         return s.encode()
 
     def getChecksum(self):  # 求checksum
@@ -178,6 +194,13 @@ class segment:  # 定义传输报文的格式
     def payloadToByte(self) -> bytes:  # 将payload转换成bytes
         s = self.payload
         return s.encode()
+    @staticmethod
+    def payloadToByte(payload) -> bytes:  # 将payload转换成bytes
+        s = payload
+        return s.encode()
 
     def getSegment(self) -> bytes:  # 将整个报文转换为bytes
         byte = self.getFlag() + self.seqNumber.to_bytes() + self.ackNumber.to_bytes() + self.length.to_bytes() + self.checksum.to_bytes() + self.payloadToByte()
+    @staticmethod
+    def getSegment(sin=0,fin=0,ack=0,rst=0,seqNumber=0,ackNumber=0,length=0,checksum=0,payload='') -> bytes:  # 将整个报文转换为bytes
+        byte = segment.getFlag(sin,fin,ack,rst) + seqNumber.to_bytes() + ackNumber.to_bytes() + length.to_bytes() + checksum.to_bytes() + segment.payloadToByte()
