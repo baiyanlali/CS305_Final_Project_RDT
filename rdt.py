@@ -27,6 +27,9 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
         self.segment=None
+        self.port=None
+        self.dstIP=None
+        self.timeout=None
         #############################################################################
 
         #############################################################################
@@ -85,6 +88,13 @@ class RDTSocket(UnreliableSocket):
         #                             END OF YOUR CODE                              #
         #############################################################################
         return data
+
+    def recvfrom(self, bufsize) ->bytes:
+        pass
+
+    def settimeout(self, value):
+        pass
+
 
     def send(self, bytes: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
         """
