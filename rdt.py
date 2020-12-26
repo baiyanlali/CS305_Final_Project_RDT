@@ -103,6 +103,7 @@ class RDTSocket(UnreliableSocket):
             self.ackNum = data_sever.seqNumber + 1
             self.sendto(segment(sin=1, ack=1, seqNumber=self.seqNum, ackNumber=self.ackNum).getSegment(),
                         self.connectAddr)
+
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
