@@ -31,6 +31,11 @@ class RDTSocket(UnreliableSocket):
         self.recvSin = False  # 表示是否收到建立连接的请求
         self.ackNum = 0  # 表示下一个想要的包的信号
         self.connectAddr = None  # 表示与这个socket相连的ip地址
+        self.recvSin = False  # 表示是否收到建立连接的请求
+        self.ackNum = 0  # 表示下一个想要的包的信号
+
+        self.IPdst = ''  # 建立连接后终点IP地址
+        self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -114,7 +119,13 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        raise NotImplementedError()
+        if 'connect' in self.status:
+            seqNumber=0
+            pieces=1000
+            segment(seqNumber=seqNumber,)
+            segment()
+            self.status.remove('connect')
+            self.sendto(bytes, self.IPdst)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -150,3 +161,6 @@ class RDTSocket(UnreliableSocket):
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
 
 """
+
+
+

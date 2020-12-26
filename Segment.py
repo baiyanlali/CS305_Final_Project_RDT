@@ -16,25 +16,31 @@ class segment:  # 定义传输报文的格式
         self.seqNumber = seqNumber
         self.ackNumber = ackNumber
 
-        self.length = length
-        self.checksum = checkSum
 
+        # self.checksum = checkSum
+
+
+        self.getChecksum()
         self.payload = payload
+        self.length = len(payload.encode())
 
     def getLength(self):  # 求payload的长度
         self.length = len(self.payload)
 
     def getFlag(self) -> bytes:  # 将sin，fin,ack,rst打包成一个byte
-        s = str(self.sin) + str(self.fin) + str(self.ack) + str(self.rst) + "0000"
+        s = str(self.sin) + str(self.fin) + str(self.ack) + str(self.rst)
         return s.encode()
 
     @staticmethod
     def getFlagStatic(sin=0, fin=0, ack=0, rst=0):
-        s = str(sin) + str(fin) + str(ack) + str(rst) + "0000"
+        s = str(sin) + str(fin) + str(ack) + str(rst)
         return s.encode()
 
     def getChecksum(self) -> int:  # 求checksum
-        s = self.payload.encode()
+        s = self.getFlag() + self.seqNumber.to_bytes(4, byteorder='little') + \
+               self.ackNumber.to_bytes(4, byteorder='little') + \
+               self.length.to_bytes(4, byteorder='little') + \
+               self.payloadToByte()
         checksum = 0
         for i in s:
             checksum += i
@@ -85,13 +91,13 @@ class segment:  # 定义传输报文的格式
         ack = data[2]-48
         rst = data[3]-48
 
-        seqNumber = int().from_bytes(data[8:12], byteorder='little')
-        ackNumber = int().from_bytes(data[12:16], byteorder='little')
+        seqNumber = int().from_bytes(data[4:8], byteorder='little')
+        ackNumber = int().from_bytes(data[8:12], byteorder='little')
 
-        length = int().from_bytes(data[16:20], byteorder='little')
-        checksum = int().from_bytes(data[20:22], byteorder='little')
+        length = int().from_bytes(data[12:16], byteorder='little')
+        checksum = int().from_bytes(data[16:18], byteorder='little')
 
-        payload = bytes.decode(data[22:])
+        payload = bytes.decode(data[18:])
         # payload = ''
         return segment(sin=sin, fin=fin, ack=ack, rst=rst, seqNumber=seqNumber,
                        ackNumber=ackNumber, length=length,checkSum=checksum,
@@ -102,7 +108,6 @@ if __name__ == "__main__":
     data = segment(sin=0, fin=1, ack=0, rst=1, seqNumber=1024, ackNumber=1008, length=2020,payload="asdlfjasdflasjdf;lsadfjh")
 
     data.getChecksum()
-    segment.getSegmentStatic(sin=0, fin=1, ack=0, rst=1, seqNumber=1024, ackNumber=1008, length=2020)
     dddd = data.getSegment()
     print(dddd)
     data_recv = segment.parse(dddd)
