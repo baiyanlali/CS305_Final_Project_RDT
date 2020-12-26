@@ -49,7 +49,17 @@ class segment:  # 定义传输报文的格式
         return checksum
 
     @staticmethod
-    def Checksum()->bool:
+    def Checksum(seg:'segment')->bool:
+        s = seg.getFlag() + seg.seqNumber.to_bytes(4, byteorder='little') + \
+            seg.ackNumber.to_bytes(4, byteorder='little') + \
+            seg.length.to_bytes(4, byteorder='little') + \
+            seg.payloadToByte()
+        checksum = 0
+        for i in s:
+            checksum += i
+        checksum = checksum % 4294967296
+
+        return seg.checksum == checksum
 
 
     def payloadToByte(self) -> bytes:  # 将payload转换成bytes
