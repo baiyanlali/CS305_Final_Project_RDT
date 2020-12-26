@@ -141,17 +141,23 @@ class RDTSocket(UnreliableSocket):
             seqNumber = 0
             pieces = 1000
             seg = segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
-            self._send_to(seg+bytes,self.connectAddr)
+            self._send_to(seg + bytes, self.connectAddr)
             while seqNumber + pieces < len(bytes):
 
                 buffer = self._recv_from(1024)
-                head=
+                head = buffer[:18]
+                seg = segment.parse(head)
+                if seg.ack == seqNumber:
+                    seqNumber += pieces
+                    seg = segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
+                    self._send_to(seg + bytes, self.connectAddr)
+                    pass
             # 如果目前为连接状态，则发送数据，将发送的数据进行切片
 
             segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
             segment()
             self.status.remove('connect')
-            self.sendto(bytes, self.IPdst)
+            self.sendto(bytes, self.connectAddr)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -190,6 +196,3 @@ class RDTSocket(UnreliableSocket):
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
 
 """
-
-
-
