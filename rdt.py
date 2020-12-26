@@ -1,4 +1,5 @@
 from USocket import UnreliableSocket
+from Segment import segment
 import threading
 import time
 
@@ -26,15 +27,9 @@ class RDTSocket(UnreliableSocket):
         self.debug = debug
         #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
-
-        self.segment = None
-        self.port = None
-        self.dstIP = None
-        self.timeout = None
-        self.status={}
-        self.isClient=None
         #############################################################################
-
+        self.recvSin=False#表示是否收到建立连接的请求
+        self.ackNum=0#表示下一个想要的包的信号
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -52,13 +47,20 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        data_client,addr_client=self.recvfrom(1024)
-        client = RDTSocket()
-        client.isClient=False
-        client.bind(('localhost',10086))
-        client.sendto(segment(ack=1,sin=1).getSegment())
-        data_client,addr_client=client.recvfrom(1024)
-        if data_client
+        while True:
+            data_client,addr_client=self.recvfrom(1024)
+            data_client=segment.parse(data_client)#将受到的数据解码
+            if data_client.syn==1:
+                self.recvSin=True
+                self.ackNum=data_client.seqNumber+1
+            ackReply=segment(sin=1,fin=0,ack=1,rst=0,seqNumber=0,ackNumber=self.ackNum,length=0,checkSum=0,payload='')
+            conn.sendto(ackReply.getSegment(),addr_client)
+
+            client = RDTSocket()
+            client.isClient=False
+            client.bind(('localhost',10086))
+            client.sendto(segment(ack=1,sin=1).getSegment())
+            data_client,addr_client=client.recvfrom(1024)
 
 
         #############################################################################
