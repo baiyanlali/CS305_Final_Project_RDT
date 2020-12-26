@@ -28,8 +28,9 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
         #############################################################################
-        self.recvSin=False#表示是否收到建立连接的请求
-        self.ackNum=0#表示下一个想要的包的信号
+        self.recvSin = False  # 表示是否收到建立连接的请求
+        self.ackNum = 0  # 表示下一个想要的包的信号
+        self.connectAddr = None  # 表示与这个socket相连的ip地址
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -48,21 +49,22 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
         while True:
-            data_client,addr_client=self.recvfrom(1024)
-            data_client=segment.parse(data_client)#将受到的数据解码
-            if data_client.syn==1:
-                self.recvSin=True
-                self.ackNum=data_client.seqNumber+1
-            ackReply=segment(sin=1,fin=0,ack=1,rst=0,seqNumber=0,ackNumber=self.ackNum,length=0,checkSum=0,payload='')
-            conn.sendto(ackReply.getSegment(),addr_client)
-
-            client = RDTSocket()
-            client.isClient=False
-            client.bind(('localhost',10086))
-            client.sendto(segment(ack=1,sin=1).getSegment())
-            data_client,addr_client=client.recvfrom(1024)
-
-
+            data_client, addr_client = self.recvfrom(1024)
+            data_client = segment.parse(data_client)  # 将受到的数据解码
+            if data_client.syn == 1:
+                self.recvSin = True
+                self.ackNum = data_client.seqNumber + 1
+            conn.sendto(segment(sin=1, ack=1, ackNumber=self.ackNum), addr_client)
+            while True:
+                data_client2, addr_client2 = self.recvfrom(1024)
+                data_client2 = segment.parse(data_client2)
+                if data_client2.syn == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:
+                    conn.connectAddr = addr_client
+                    conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1), addr_client)
+                    self.__init__()
+                    break
+            break
+        return conn, addr_client
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -148,6 +150,3 @@ class RDTSocket(UnreliableSocket):
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
 
 """
-
-
-
