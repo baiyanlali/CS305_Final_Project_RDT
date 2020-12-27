@@ -45,9 +45,11 @@ class ReceiveWindow:  # 收端所使用的sliding window
     def __init__(self, windowSize, windowBase=0):
         self.windowSize = windowSize
         self.windowBase = windowBase
-        self.receiveBuffer = dict.fromkeys(range(windowBase, windowBase + windowSize), None)  # 字典buffer 用来储存已经收到的乱序数据包
+        self.receiveBuffer = {}
+        for i in range(0, self.windowSize):
+            self.receiveBuffer[i] = None  # 字典buffer 用来储存已经收到的乱序数据包
 
-    def addSegment(self, seqNum:int, segment)->bool:  # 在buffer中添加收到的包,返回为真表示添加成功
+    def addSegment(self, seqNum: int, segment) -> bool:  # 在buffer中添加收到的包,返回为真表示添加成功
         if seqNum >= self.windowBase and self.hasSegment(seqNum) is False:  # 在包的seqNum大于windowBase且没收到这个包的情况下，添加该包
             self.receiveBuffer[seqNum] = segment
             return True
@@ -59,7 +61,7 @@ class ReceiveWindow:  # 收端所使用的sliding window
             segment = self.popSegment(self.windowBase)
             del self.receiveBuffer[self.windowBase]
             self.windowBase = self.windowBase + 1
-            self.receiveBuffer[self.windowBase + self.windowSize] = None
+            self.receiveBuffer[self.windowBase + self.windowSize-1] = None
             return segment
 
     def popSegment(self, seqNum) -> Segment.segment:
