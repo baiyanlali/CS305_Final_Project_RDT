@@ -6,4 +6,7 @@ if __name__ == "__main__":
     sock, addr = socket.accept() # type: (rdt.RDTSocket,(str,int))
 
     while True:
-        sock.send(b'10086,2333')
+        data = sock.recv(30)
+        print(data)
+    # while True:
+        # sock.send(b'10086,2333')
