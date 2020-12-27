@@ -86,7 +86,7 @@ class RDTSocket(UnreliableSocket):
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
                         conn.connectAddr = addr_client  # 建立连接
                         conn.isConnected = True
-                        # print("accept:connection established")
+                        print("accept:connection established")
                         conn.status.append('connect')
                         self.reset()  # 重置socket
                         break
@@ -144,7 +144,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         rw = ReceiveWindow(windowSize=30, windowBase=0)  # TODO 估计得改
         while self.isConnected:
-            data_sever, addr_sever = self.recvfrom(1024)
+            data_sever, addr_sever = self.recvfrom(bufsize)
             data_sever = segment.parse(data_sever)
             # print("recv:", data_sever)
             if data_sever.Checksum(data_sever):  # 若收到报文的checksum正确
@@ -153,10 +153,12 @@ class RDTSocket(UnreliableSocket):
                     # print('recv: add segment successfully')
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
                     # print('recv: send ack', data_sever.seqNumber)
+            else:
+                print('\033[1;45m recv: have wrong data \033[0m')
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
             if data_sever.rst == 1 and data_sever.Checksum(data_sever):
-                print('recv: received all segments')
+                # print('recv: received all segments')
                 break
 
         #############################################################################

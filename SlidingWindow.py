@@ -36,11 +36,13 @@ class SendingWindow:
         if ackNum == len(self.datas) - 1:  # 判断数据包是否传输完毕
             # print('sending_window: send over')
             del self.buffer[ackNum]
+            del self.time[ackNum]
             return True
         self.buffer[ackNum] = None  # 将ack位置设为空
         dataToSend = []
         while self.buffer[self.window_base] is None:  # 检测并调整窗口起始点
             del self.buffer[self.window_base]
+            del self.time[self.window_base]
             self.window_base += 1
 
             if self.window_base + self.window_size <= len(self.datas):
@@ -54,13 +56,16 @@ class SendingWindow:
 
     def check_time_out(self,time_out:int, sender_time_out_method):
         time_now=time.time()
-        for i in range(self.window_base, min(self.window_base +self.window_size, len(self.datas))):
-            if self.buffer[i] is not None:
-                off=time_now-self.time[i]
-                if off>=time_out:
-                    sender_time_out_method(self.buffer[i])
-                    self.time[i]=time_now
-        time.sleep(0.2)
+        while True:
+            for i in range(self.window_base, min(self.window_base +self.window_size, len(self.datas))):
+                if i in self.buffer.keys() and self.buffer[i] is not None:
+                    off=time_now-self.time[i]
+                    if off>=time_out:
+                        sender_time_out_method(self.buffer[i])
+                        self.time[i]=time_now
+                        print('SlidingWindow_checkTimeOut: retrans')
+            time.sleep(0.2)
+            # print('check_time_out:beep')
 
 
 class ReceiveWindow:  # 收端所使用的sliding window
@@ -96,8 +101,11 @@ class ReceiveWindow:  # 收端所使用的sliding window
             return False
 
     def hasSegment(self, seqNum) -> bool:  # 检查缓存中是否已有这个包，若有，返回真，否则返回假
-        if self.receiveBuffer[seqNum] is not None:
-            return True
+        if seqNum in self.receiveBuffer.keys():
+            if self.receiveBuffer[seqNum] is not None:
+                return True
+            else:
+                return False
         else:
             return False
 
