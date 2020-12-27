@@ -40,6 +40,7 @@ class RDTSocket(UnreliableSocket):
         self.isConnected = False
         self.rdt_time = 1
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
+        self.timer={}       #存储所有计时器
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -170,6 +171,7 @@ class RDTSocket(UnreliableSocket):
         # print('rdt_sender_time_out: time out!')
         seg = args[0]
         t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
+        self.timer[t.seq] = t
         self.sendto(seg.getSegment(), self.connectAddr)
         t.start_to_count()
         pass
@@ -183,40 +185,45 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+        if self.isConnected:
+            pieces_size = 100
+            datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
+            sw = SendingWindow(window_size=20, datas=datas)  # 初始化发送窗口
+            ack_finish = False
+            for seq, seg in sw.buffer.items():  # 将窗口内的包发送
+                t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
+                self.timer[t.seq]=t
+                # print("send:send", seg.seqNumber)
+                self.sendto(seg.getSegment(), self.connectAddr)
+                t.start_to_count()
+                pass
+            while ack_finish is False:  # 开始发送
 
-        pieces_size = 100
-        datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
-        sw = SendingWindow(window_size=20, datas=datas)  # 初始化发送窗口
-        ack_finish = False
-        for seq, seg in sw.buffer.items():  # 将窗口内的包发送
-            t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
-            # print("send:send", seg.seqNumber)
-            self.sendto(seg.getSegment(), self.connectAddr)
-            t.start_to_count()
-            pass
-        while ack_finish is False:  # 开始发送
+                buffer, addr = self.recvfrom(1024)  # 接受ack信息
 
-            buffer, addr = self.recvfrom(1024)  # 接受ack信息
+                # head = buffer[:18]
+                seg = segment.parse(buffer)
 
-            # head = buffer[:18]
-            seg = segment.parse(buffer)
+                if segment.Checksum(seg) is False:
+                    continue
 
-            if segment.Checksum(seg) is False:
-                continue
-
-            if seg.ackNumber in sw.buffer.keys():
-                con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
-                if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
-                    # print('sender: start to slide send window')
-                    for segg in con:
-                        # TODO:ADD TIME OUT
-                        # print("send:send", segg.seqNumber)
-                        t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
-                        self.sendto(segg.getSegment(), self.connectAddr)
-                        t.start_to_count()
-                elif con == True:  # 返回结果:真,说明发送完毕
-                    ack_finish = True
-                    # print('sender: send finish')
+                if seg.ackNumber in sw.buffer.keys():
+                    if seg.ackNumber in self.timer.keys():  #删除收到包的timer
+                        self.timer[seg.ackNumber].cancel_count()
+                        del self.timer[seg.ackNumber]
+                    con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
+                    if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
+                        # print('sender: start to slide send window')
+                        for segg in con:
+                            # TODO:ADD TIME OUT
+                            # print("send:send", segg.seqNumber)
+                            t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
+                            self.timer[t.seq] = t
+                            self.sendto(segg.getSegment(), self.connectAddr)
+                            t.start_to_count()
+                    elif con == True:  # 返回结果:真,说明发送完毕
+                        ack_finish = True
+                        # print('sender: send finish')
 
         #############################################################################
         #                             END OF YOUR CODE                              #
