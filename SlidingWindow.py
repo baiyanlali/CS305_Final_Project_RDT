@@ -62,7 +62,7 @@ class ReceiveWindow:  # 收端所使用的sliding window
 
 
 if __name__ == "__main__":
-    sw = sending_window(3, [0,1, 2, 3, 4, 5, 6, 7])
+    sw = SendingWindow(3, [0,1, 2, 3, 4, 5, 6, 7])
     sw.ack(1)
     sw.ack(0)
     sw.ack(2)
