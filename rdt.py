@@ -3,7 +3,6 @@ import math
 from USocket import UnreliableSocket
 from Segment import segment
 from SlidingWindow import SendingWindow, ReceiveWindow
-from RDTTimer import RDTTimer
 import threading
 import time
 
@@ -40,7 +39,6 @@ class RDTSocket(UnreliableSocket):
         self.isConnected = False
         self.rdt_time = 1
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
-        self.timer={}       #存储所有计时器
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -88,7 +86,7 @@ class RDTSocket(UnreliableSocket):
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
                         conn.connectAddr = addr_client  # 建立连接
                         conn.isConnected = True
-                        # print("accept:connection established")
+                        print("accept:connection established")
                         conn.status.append('connect')
                         self.reset()  # 重置socket
                         break
@@ -146,7 +144,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         rw = ReceiveWindow(windowSize=30, windowBase=0)  # TODO 估计得改
         while self.isConnected:
-            data_sever, addr_sever = self.recvfrom(1024)
+            data_sever, addr_sever = self.recvfrom(bufsize)
             data_sever = segment.parse(data_sever)
             # print("recv:", data_sever)
             if data_sever.Checksum(data_sever):  # 若收到报文的checksum正确
@@ -155,10 +153,12 @@ class RDTSocket(UnreliableSocket):
                     # print('recv: add segment successfully')
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
                     # print('recv: send ack', data_sever.seqNumber)
+            else:
+                print('\033[1;45m recv: have wrong data \033[0m')
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
             if data_sever.rst == 1 and data_sever.Checksum(data_sever):
-                print('recv: received all segments')
+                # print('recv: received all segments')
                 break
 
         #############################################################################
@@ -169,11 +169,7 @@ class RDTSocket(UnreliableSocket):
 
     def sender_time_out(self, *args):
         # print('rdt_sender_time_out: time out!')
-        seg = args[0]
-        t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
-        self.timer[t.seq] = t
-        self.sendto(seg.getSegment(), self.connectAddr)
-        t.start_to_count()
+        self.sendto(args[0].getSegment(), self.connectAddr)
         pass
 
     def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
@@ -188,15 +184,12 @@ class RDTSocket(UnreliableSocket):
         if self.isConnected:
             pieces_size = 100
             datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
-            sw = SendingWindow(window_size=20, datas=datas)  # 初始化发送窗口
+            sw = SendingWindow(window_size=20, datas=datas,sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
             ack_finish = False
             for seq, seg in sw.buffer.items():  # 将窗口内的包发送
-                t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
-                self.timer[t.seq]=t
                 # print("send:send", seg.seqNumber)
                 self.sendto(seg.getSegment(), self.connectAddr)
-                t.start_to_count()
-                pass
+
             while ack_finish is False:  # 开始发送
 
                 buffer, addr = self.recvfrom(1024)  # 接受ack信息
@@ -208,19 +201,17 @@ class RDTSocket(UnreliableSocket):
                     continue
 
                 if seg.ackNumber in sw.buffer.keys():
-                    if seg.ackNumber in self.timer.keys():  #删除收到包的timer
-                        self.timer[seg.ackNumber].cancel_count()
-                        del self.timer[seg.ackNumber]
+
                     con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
                     if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                         # print('sender: start to slide send window')
                         for segg in con:
                             # TODO:ADD TIME OUT
                             # print("send:send", segg.seqNumber)
-                            t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
-                            self.timer[t.seq] = t
+
+
                             self.sendto(segg.getSegment(), self.connectAddr)
-                            t.start_to_count()
+
                     elif con == True:  # 返回结果:真,说明发送完毕
                         ack_finish = True
                         # print('sender: send finish')
