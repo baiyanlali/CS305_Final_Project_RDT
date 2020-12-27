@@ -1,5 +1,6 @@
 import rdt
-if __name__=="__main__":
+
+if __name__ == "__main__":
     socket = rdt.RDTSocket()
-    socket.bind(('127.0.0.1',10086))
-    socket.accept()
+    socket.bind(('127.0.0.1', 10086))
+    sock, addr = socket.accept()

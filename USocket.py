@@ -30,7 +30,7 @@ def get_sendto(id, rate=None):
 class UnreliableSocket:
     def __init__(self, rate=None):
         assert rate == None or rate > 0, 'Rate should be positive or None.'
-        sockets[id(self)] = socket(AF_INET, SOCK_DGRAM)  # type:socket
+        sockets[id(self)] = socket(AF_INET, SOCK_DGRAM)  # type: socket
 
         self.sendto = get_sendto(id(self), rate)
 
@@ -38,12 +38,17 @@ class UnreliableSocket:
         sockets[id(self)].bind(address)
 
     def recvfrom(self, bufsize) -> bytes:  # data, from
+        print(self)
         data, frm = sockets[id(self)].recvfrom(bufsize)
+        print(data,frm)
+        print(data[8:],frm)
         addr = bytes_to_addr(data[:8])
-        if frm == network:
-            return data[8:], addr
-        else:
-            return self.recvfrom(bufsize)
+        return data[8:], addr
+        # return data, addr
+        # if frm == network:
+        #     return data[8:], addr
+        # else:
+        #     return self.recvfrom(bufsize)
 
     def settimeout(self, value):
         sockets[id(self)].settimeout(value)

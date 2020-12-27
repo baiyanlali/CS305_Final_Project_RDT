@@ -111,7 +111,7 @@ class segment:  # 定义传输报文的格式
         length = int().from_bytes(data[12:16], byteorder='little')
         checksum = int().from_bytes(data[16:18], byteorder='little')
 
-        payload = bytes.decode(data[18:])
+        payload = data[18:0].decode()   # bytes.decode(data[18:])
         # payload = ''
         return segment(sin=sin, fin=fin, ack=ack, rst=rst, seqNumber=seqNumber,
                        ackNumber=ackNumber, length=length, checkSum=checksum,
@@ -119,13 +119,5 @@ class segment:  # 定义传输报文的格式
 
 
 if __name__ == "__main__":
-    data = segment(sin=0, fin=1, ack=0, rst=1, seqNumber=1024, ackNumber=1008, length=2020,
-                   payload="asdlfjasdflasjdf;lsadfjh")
+    print(segment(sin=1,ack=1).getSegment())
 
-    data.getChecksum()
-    dddd = data.getSegment()
-    print(dddd)
-    data_recv = segment.parse(dddd)
-    print(data_recv.getSegment())
-    for i in data_recv.getSegment():
-        print(i)
