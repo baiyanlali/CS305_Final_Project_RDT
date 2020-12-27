@@ -32,7 +32,7 @@ class RDTSocket(UnreliableSocket):
         self.ackNum = 0  # 表示下一个想要的包的信号
         self.seqNum = 0  # 表示下一个要发的包的信号
         self.connectAddr = None  # 表示与这个socket相连的ip地址
-        self.recvSin = False  # 表示是否收到建立连接的请求
+        self.windowsize = 10  # 表示windowsize的大小 值可在调试过程中修改
 
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
         #############################################################################
@@ -46,7 +46,6 @@ class RDTSocket(UnreliableSocket):
         self.recvSin = False
         self.ackNum = 0
         self.connectAddr = None
-        self.recvSin = False
 
         self.status = []
 
