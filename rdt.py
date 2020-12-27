@@ -144,13 +144,15 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        ReceiveWindow(windowSize=10, windowBase=self.ackNum)
+        ReceiveWindow(windowSize=10, windowBase=self.ackNum)  # TODO 估计得改
         while self.isConnected:
             data_sever, addr_sever = self.recvfrom(1024)
             data_sever = segment.parse(data_sever)
-            ReceiveWindow.addSegment(data_sever.seqNumber, data_sever)
+            if data_sever.Checksum():  # 若收到报文的checksum正确
+                if ReceiveWindow.addSegment(data_sever.seqNumber, data_sever):  # 若报文正确添加进buffer中，回一个ack
+                    self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
             while ReceiveWindow.needCheck():
-                data = data + ReceiveWindow.checkBuffer().parse().
+                data = data + ReceiveWindow.checkBuffer().parse().payload
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -199,11 +201,9 @@ class RDTSocket(UnreliableSocket):
                 if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                     print('sender: start to slide send window')
                     for segg in con:
-                        t = RDTTimer(segg, self.rdt_time, self.sender_time_out)
                         self.sendto(segg, self.connectAddr)
-                        t.start_to_count()
-                elif con == True:  # 返回结果:真,说明发送完毕
-                    ack_finish = True
+                elif con==True:                 #返回结果:真,说明发送完毕
+                    ack_finish=True
                     print('sender: send finish')
 
         #############################################################################
