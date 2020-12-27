@@ -157,7 +157,8 @@ class RDTSocket(UnreliableSocket):
                     print('recv: send ack', data_sever.seqNumber)
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
-            if data_sever.rst == 1:
+            if data_sever.rst == 1 and data_sever.Checksum(data_sever):
+                print('recv: received all segments')
                 break
 
         #############################################################################
