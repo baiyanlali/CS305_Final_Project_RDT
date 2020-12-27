@@ -30,12 +30,15 @@ class SendingWindow:
         while self.buffer[self.window_base] is None:    #检测并调整窗口起始点
             del self.buffer[self.window_base]
             self.window_base += 1
+            dataToSend=[]
 
             if self.window_base+self.window_size <= len(self.datas):
                 self.buffer[self.window_base + self.window_size -1] = \
                     self.datas[self.window_base + self.window_size -1]
+                dataToSend.append(self.datas[self.window_base + self.window_size -1])
             else:
                 self.window_size-=1                     #如果窗口已到达右边界，则使window_size-1以确保不越界
+        return dataToSend
 
 
 class ReceiveWindow:  # 收端所使用的sliding window
@@ -44,7 +47,7 @@ class ReceiveWindow:  # 收端所使用的sliding window
         self.windowBase = windowBase
         self.receiveBuffer = dict.fromkeys(range(windowBase, windowBase + windowSize), None)  # 字典buffer 用来储存已经收到的乱序数据包
 
-    def addSegment(self, seqNum, segment):  # 在buffer中添加收到的包
+    def addSegment(self, seqNum, segment:Segment.segment):  # 在buffer中添加收到的包
         if seqNum >= self.windowBase:
             self.receiveBuffer[seqNum] = segment
 

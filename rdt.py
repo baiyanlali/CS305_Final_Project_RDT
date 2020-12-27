@@ -2,6 +2,7 @@ import math
 
 from USocket import UnreliableSocket
 from Segment import segment
+from SlidingWindow import SendingWindow, ReceiveWindow
 import threading
 import time
 
@@ -144,7 +145,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         return data
 
-    def send(self, bytes: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
+    def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
         """
         Send data to the socket.
         The socket must be connected to a remote socket, i.e. self._send_to must not be none.
@@ -153,28 +154,30 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        bytes = bytes.encode()
-        if 'connect' in self.status:
-            seqNumber = 0
-            pieces = 1000
-            seg = segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
-            self.sendto(seg.getSegment() + bytes, self.connectAddr)
-            while seqNumber + pieces < len(bytes):
+        pieces_size = 2
+        datas = self.slice_into_pieces(byte, pieces_size)   #将包切片
+        sw = SendingWindow(pieces_size, datas)  #初始化发送窗口
+        ack_finish = False
+        for seq, seg in sw.buffer.items():  # 将窗口内的包发送
+            self.sendto(seg.getSegment(), self.connectAddr)
+            pass
+        while ack_finish is False:              #开始发送
 
-                buffer = self._recv_from(1024)
-                head = buffer[:18]
-                seg = segment.parse(head)
-                if seg.ack == seqNumber:
-                    seqNumber += pieces
-                    seg = segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
-                    self.sendto(seg + bytes, self.connectAddr)
-                    pass
-            # 如果目前为连接状态，则发送数据，将发送的数据进行切片
+            buffer = self._recv_from(1024)      #接受ack信息
 
-            segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
-            segment()
-            self.status.remove('connect')
-            self.sendto(bytes, self.connectAddr)
+            head = buffer[:18]
+            seg = segment.parse(head)
+            if seg.ack in sw.buffer.keys():
+                con = sw.ack(seg.ack)           #通知发送窗口接收到了包并且返回结果
+                if type(con) == list:           #返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
+                    print('sender: start to slide send window')
+                    for segg in con:
+                        self.sendto(segg, self.connectAddr)
+                elif con==True:                 #返回结果:真,说明发送完毕
+                    ack_finish=True
+                    print('sender: send finish')
+
+
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -218,6 +221,7 @@ class RDTSocket(UnreliableSocket):
             pieces.append(header)
 
         return pieces
+
 
 """
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
