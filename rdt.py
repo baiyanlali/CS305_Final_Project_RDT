@@ -139,20 +139,24 @@ class RDTSocket(UnreliableSocket):
         In other words, if someone else sends data to you from another address,
         it MUST NOT affect the data returned by this function.
         """
-        data = None
-        assert self._recv_from, "Connection not established yet. Use recvfrom instead."
+        data = b''
+        # assert self._recv_from, "Connection not established yet. Use recvfrom instead."
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        ReceiveWindow(windowSize=10, windowBase=self.ackNum)  # TODO 估计得改
+        rw = ReceiveWindow(windowSize=10, windowBase=0)  # TODO 估计得改
         while self.isConnected:
             data_sever, addr_sever = self.recvfrom(1024)
             data_sever = segment.parse(data_sever)
-            if data_sever.Checksum():  # 若收到报文的checksum正确
-                if ReceiveWindow.addSegment(data_sever.seqNumber, data_sever):  # 若报文正确添加进buffer中，回一个ack
+            print("recv:", data_sever)
+            if data_sever.Checksum(data_sever):  # 若收到报文的checksum正确
+
+                if rw.addSegment(seqNum=data_sever.seqNumber, segment=data_sever):  # 若报文正确添加进buffer中，回一个ack
+                    print('recv: add segment successfully')
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
-            while ReceiveWindow.needCheck():
-                data = data + ReceiveWindow.checkBuffer().parse().payload
+                    print('recv: send ack', data_sever.seqNumber)
+            while rw.needCheck():
+                data = data + rw.checkBuffer().payload
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -161,9 +165,9 @@ class RDTSocket(UnreliableSocket):
 
     def sender_time_out(self, *args):
         print('rdt_sender_time_out: time out!')
-        seg=args[0]
+        seg = args[0]
         t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
-        self.sendto(seg, self.connectAddr)
+        self.sendto(seg.getSegment(), self.connectAddr)
         t.start_to_count()
         pass
 
@@ -182,13 +186,14 @@ class RDTSocket(UnreliableSocket):
         sw = SendingWindow(pieces_size, datas)  # 初始化发送窗口
         ack_finish = False
         for seq, seg in sw.buffer.items():  # 将窗口内的包发送
-            t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
+            # t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
+            print("send:send", seg.seqNumber)
             self.sendto(seg.getSegment(), self.connectAddr)
-            t.start_to_count()
+            # t.start_to_count()
             pass
         while ack_finish is False:  # 开始发送
 
-            buffer = self._recv_from(1024)  # 接受ack信息
+            buffer, addr= self.recvfrom(1024)  # 接受ack信息
 
             # head = buffer[:18]
             seg = segment.parse(buffer)
@@ -196,14 +201,16 @@ class RDTSocket(UnreliableSocket):
             if segment.Checksum(seg) is False:
                 continue
 
-            if seg.ack in sw.buffer.keys():
-                con = sw.ack(seg.ack)  # 通知发送窗口接收到了包并且返回结果
+            if seg.ackNumber in sw.buffer.keys():
+                con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
                 if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                     print('sender: start to slide send window')
                     for segg in con:
-                        self.sendto(segg, self.connectAddr)
-                elif con==True:                 #返回结果:真,说明发送完毕
-                    ack_finish=True
+                        # TODO:ADD TIME OUT
+                        print("send:send", segg.seqNumber)
+                        self.sendto(segg.getSegment(), self.connectAddr)
+                elif con == True:  # 返回结果:真,说明发送完毕
+                    ack_finish = True
                     print('sender: send finish')
 
         #############################################################################
