@@ -47,9 +47,12 @@ class ReceiveWindow:  # 收端所使用的sliding window
         self.windowBase = windowBase
         self.receiveBuffer = dict.fromkeys(range(windowBase, windowBase + windowSize), None)  # 字典buffer 用来储存已经收到的乱序数据包
 
-    def addSegment(self, seqNum, segment: Segment.segment)->bool:  # 在buffer中添加收到的包
-        if seqNum >= self.windowBase and self.hasSegment():
+    def addSegment(self, seqNum, segment: Segment.segment)->bool:  # 在buffer中添加收到的包,返回为真表示添加成功
+        if seqNum >= self.windowBase and self.hasSegment() is False:  # 在包的seqNum大于windowBase且没收到这个包的情况下，添加该包
             self.receiveBuffer[seqNum] = segment
+            return True
+        else:
+            return False
 
     def checkBuffer(self) -> Segment.segment:  # 检查seqNum为windowBase的包是否已经收到，若是，则返回该包，同时在字典中删除该包
         if self.receiveBuffer[self.windowBase] is not None:
@@ -69,7 +72,7 @@ class ReceiveWindow:  # 收端所使用的sliding window
             return False
 
     def hasSegment(self, seqNum) -> bool:  # 检查缓存中是否已有这个包，若有，返回真，否则返回假
-        if self.receiveBuffer.has_key(seqNum):
+        if self.receiveBuffer[seqNum] is not None:
             return True
         else:
             return False
