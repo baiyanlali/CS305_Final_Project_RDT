@@ -144,7 +144,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        rw = ReceiveWindow(windowSize=10, windowBase=0)  # TODO 估计得改
+        rw = ReceiveWindow(windowSize=30, windowBase=0)  # TODO 估计得改
         while self.isConnected:
             data_sever, addr_sever = self.recvfrom(1024)
             data_sever = segment.parse(data_sever)
