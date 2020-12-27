@@ -1,3 +1,5 @@
+import math
+
 from USocket import UnreliableSocket
 from Segment import segment
 import threading
@@ -82,6 +84,7 @@ class RDTSocket(UnreliableSocket):
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
                         conn.connectAddr = addr_client  # 建立连接
                         print("connection established")
+                        conn.status.append('connect')
                         # conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
                         self.reset()  # 重置socket
                         break
@@ -115,6 +118,7 @@ class RDTSocket(UnreliableSocket):
             self.sendto(segment(ack=1, seqNumber=self.seqNum, ackNumber=self.ackNum).getSegment(),
                         self.connectAddr)
             print("send ack")
+            self.status.append('connect')
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -146,15 +150,16 @@ class RDTSocket(UnreliableSocket):
         Send data to the socket.
         The socket must be connected to a remote socket, i.e. self._send_to must not be none.
         """
-        assert self._send_to, "Connection not established yet. Use sendto instead."
+        # assert self._send_to, "Connection not established yet. Use sendto instead."
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+        bytes = bytes.encode()
         if 'connect' in self.status:
             seqNumber = 0
             pieces = 1000
             seg = segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
-            self._send_to(seg + bytes, self.connectAddr)
+            self.sendto(seg.getSegment() + bytes, self.connectAddr)
             while seqNumber + pieces < len(bytes):
 
                 buffer = self._recv_from(1024)
@@ -163,7 +168,7 @@ class RDTSocket(UnreliableSocket):
                 if seg.ack == seqNumber:
                     seqNumber += pieces
                     seg = segment(seqNumber=seqNumber, payload=bytes[seqNumber:min(seqNumber + pieces, len(bytes))])
-                    self._send_to(seg + bytes, self.connectAddr)
+                    self.sendto(seg + bytes, self.connectAddr)
                     pass
             # 如果目前为连接状态，则发送数据，将发送的数据进行切片
 
@@ -204,6 +209,16 @@ class RDTSocket(UnreliableSocket):
     def set_recv_from(self, recv_from):
         self._recv_from = recv_from
 
+    def slice_into_pieces(self, data: bytes, pieces_size):
+        pieces = []
+        cnt = math.ceil(len(data) / pieces_size)
+        for i in range(0, cnt + 1):
+            header = segment(seqNumber=i, ackNumber=self.ackNum,
+                             payload=data[pieces_size * i:min((pieces_size * i + 1), len(data))])
+
+            pieces.append(header)
+
+        return pieces
 
 """
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
