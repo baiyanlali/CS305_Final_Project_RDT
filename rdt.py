@@ -165,8 +165,13 @@ class RDTSocket(UnreliableSocket):
 
             buffer = self._recv_from(1024)      #接受ack信息
 
-            head = buffer[:18]
-            seg = segment.parse(head)
+
+            # head = buffer[:18]
+            seg = segment.parse(buffer)
+
+            if segment.Checksum(seg) is False:
+                continue
+
             if seg.ack in sw.buffer.keys():
                 con = sw.ack(seg.ack)           #通知发送窗口接收到了包并且返回结果
                 if type(con) == list:           #返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
@@ -221,6 +226,10 @@ class RDTSocket(UnreliableSocket):
             pieces.append(header)
 
         return pieces
+
+    def sender_time_out(self):
+        print('time_out')
+        pass
 
 
 """
