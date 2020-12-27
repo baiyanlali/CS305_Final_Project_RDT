@@ -9,16 +9,17 @@ class sending_window:
                                           , window_base + window_size), None)
 
 
-class ReceiveWindow:
+class ReceiveWindow:  # 收端所使用的sliding window
     def __init__(self, windowSize, windowBase=0):
         self.windowSize = windowSize
         self.windowBase = windowBase
-        self.receiveBuffer = dict.fromkeys(range(windowBase, windowBase + windowSize), None)
+        self.receiveBuffer = dict.fromkeys(range(windowBase, windowBase + windowSize), None)  # 字典buffer 用来储存已经收到的乱序数据包
 
-    def addSegment(self, seqNum, segment):
-        self.receiveBuffer[seqNum] = segment
+    def addSegment(self, seqNum, segment):  # 在buffer中添加收到的包
+        if seqNum >= self.windowBase:
+            self.receiveBuffer[seqNum] = segment
 
-    def checkBuffer(self) -> Segment.segment:
+    def checkBuffer(self) -> Segment.segment:  # 检查seqNum为windowBase的包是否已经收到，若是，则返回该包，同时在字典中删除该包
         if self.receiveBuffer[self.windowBase] is not None:
             segment = self.popSegment(self.windowBase)
             del self.receiveBuffer[self.windowBase]
