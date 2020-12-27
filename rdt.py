@@ -157,6 +157,8 @@ class RDTSocket(UnreliableSocket):
                     print('recv: send ack', data_sever.seqNumber)
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
+            if data_sever.rst == 1:
+                break
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -193,7 +195,7 @@ class RDTSocket(UnreliableSocket):
             pass
         while ack_finish is False:  # 开始发送
 
-            buffer, addr= self.recvfrom(1024)  # 接受ack信息
+            buffer, addr = self.recvfrom(1024)  # 接受ack信息
 
             # head = buffer[:18]
             seg = segment.parse(buffer)
