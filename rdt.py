@@ -254,8 +254,9 @@ class RDTSocket(UnreliableSocket):
         pieces = []
         cnt = math.ceil(len(data) / pieces_size)
         for i in range(0, cnt + 1):
-            header = segment(seqNumber=i, ackNumber=self.ackNum,
-                             payload=data[pieces_size * i:min((pieces_size * i + 1), len(data))])
+            #最后一个包rst设为1，代表包发送完毕
+            header = segment(rst=1 if i==cnt else 0, seqNumber=i, ackNumber=self.ackNum,
+                             payload=data[pieces_size * i:min(pieces_size * (i + 1), len(data))])
 
             pieces.append(header)
 
