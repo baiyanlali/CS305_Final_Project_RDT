@@ -3,6 +3,7 @@ import math
 from USocket import UnreliableSocket
 from Segment import segment
 from SlidingWindow import SendingWindow, ReceiveWindow
+from RDTTimer import RDTTimer
 import threading
 import time
 
@@ -37,7 +38,7 @@ class RDTSocket(UnreliableSocket):
         self.connectAddr = None  # 表示与这个socket相连的ip地址
         self.windowsize = 10  # 表示windowsize的大小 值可在调试过程中修改
         self.isConnected = False
-
+        self.rdt_time = 1
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -158,6 +159,14 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         return data
 
+    def sender_time_out(self, *args):
+        print('rdt_sender_time_out: time out!')
+        seg=args[0]
+        t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
+        self.sendto(seg, self.connectAddr)
+        t.start_to_count()
+        pass
+
     def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
         """
         Send data to the socket.
@@ -167,12 +176,15 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+
         pieces_size = 2
         datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
         sw = SendingWindow(pieces_size, datas)  # 初始化发送窗口
         ack_finish = False
         for seq, seg in sw.buffer.items():  # 将窗口内的包发送
+            t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
             self.sendto(seg.getSegment(), self.connectAddr)
+            t.start_to_count()
             pass
         while ack_finish is False:  # 开始发送
 
@@ -190,8 +202,8 @@ class RDTSocket(UnreliableSocket):
                     print('sender: start to slide send window')
                     for segg in con:
                         self.sendto(segg, self.connectAddr)
-                elif con == True:  # 返回结果:真,说明发送完毕
-                    ack_finish = True
+                elif con==True:                 #返回结果:真,说明发送完毕
+                    ack_finish=True
                     print('sender: send finish')
 
         #############################################################################
@@ -238,10 +250,6 @@ class RDTSocket(UnreliableSocket):
             pieces.append(header)
 
         return pieces
-
-    def sender_time_out(self):
-        print('time_out')
-        pass
 
 
 """
