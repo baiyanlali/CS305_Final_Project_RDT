@@ -36,6 +36,7 @@ class RDTSocket(UnreliableSocket):
         self.seqNum = 0  # 表示下一个要发的包的信号
         self.connectAddr = None  # 表示与这个socket相连的ip地址
         self.windowsize = 10  # 表示windowsize的大小 值可在调试过程中修改
+        self.isConnected=False
 
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
         #############################################################################
@@ -49,6 +50,7 @@ class RDTSocket(UnreliableSocket):
         self.recvSin = False
         self.ackNum = 0
         self.connectAddr = None
+        self.isConnected=False
 
         self.status = []
 
@@ -83,6 +85,7 @@ class RDTSocket(UnreliableSocket):
                     # if data_client2.sin == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:  # 收到了原来的地址发来的正确报文
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
                         conn.connectAddr = addr_client  # 建立连接
+                        conn.isConnected=True
                         print("connection established")
                         conn.status.append('connect')
                         # conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
@@ -119,6 +122,7 @@ class RDTSocket(UnreliableSocket):
                         self.connectAddr)
             print("send ack")
             self.status.append('connect')
+            self.isConnected=True
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -139,6 +143,14 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+        ReceiveWindow(windowSize=10,windowBase=self.ackNum)
+        while self.isConnected:
+            data_sever,addr_sever=self.recvfrom(1024)
+            data_sever=segment.parse(data_sever)
+            ReceiveWindow.addSegment(data_sever.seqNumber,data_sever)
+            while ReceiveWindow.needCheck():
+                data=data+ReceiveWindow.checkBuffer().parse().
+
 
         #############################################################################
         #                             END OF YOUR CODE                              #
