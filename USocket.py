@@ -24,6 +24,7 @@ def get_sendto(id, rate=None):
         def sendto(data: bytes, addr):
             sockets[id].sendto(addr_to_bytes(addr) + data, network)
 
+
         return sendto
 
 
