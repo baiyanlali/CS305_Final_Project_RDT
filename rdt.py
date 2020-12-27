@@ -3,6 +3,7 @@ import math
 from USocket import UnreliableSocket
 from Segment import segment
 from SlidingWindow import SendingWindow, ReceiveWindow
+from RDTTimer import RDTTimer
 import threading
 import time
 
@@ -36,8 +37,8 @@ class RDTSocket(UnreliableSocket):
         self.seqNum = 0  # 表示下一个要发的包的信号
         self.connectAddr = None  # 表示与这个socket相连的ip地址
         self.windowsize = 10  # 表示windowsize的大小 值可在调试过程中修改
-        self.isConnected=False
-
+        self.isConnected = False
+        self.rdt_time = 1
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -50,7 +51,7 @@ class RDTSocket(UnreliableSocket):
         self.recvSin = False
         self.ackNum = 0
         self.connectAddr = None
-        self.isConnected=False
+        self.isConnected = False
 
         self.status = []
 
@@ -85,7 +86,7 @@ class RDTSocket(UnreliableSocket):
                     # if data_client2.sin == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:  # 收到了原来的地址发来的正确报文
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
                         conn.connectAddr = addr_client  # 建立连接
-                        conn.isConnected=True
+                        conn.isConnected = True
                         print("connection established")
                         conn.status.append('connect')
                         # conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
@@ -122,7 +123,7 @@ class RDTSocket(UnreliableSocket):
                         self.connectAddr)
             print("send ack")
             self.status.append('connect')
-            self.isConnected=True
+            self.isConnected = True
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -143,19 +144,26 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        ReceiveWindow(windowSize=10,windowBase=self.ackNum)
+        ReceiveWindow(windowSize=10, windowBase=self.ackNum)
         while self.isConnected:
-            data_sever,addr_sever=self.recvfrom(1024)
-            data_sever=segment.parse(data_sever)
-            ReceiveWindow.addSegment(data_sever.seqNumber,data_sever)
+            data_sever, addr_sever = self.recvfrom(1024)
+            data_sever = segment.parse(data_sever)
+            ReceiveWindow.addSegment(data_sever.seqNumber, data_sever)
             while ReceiveWindow.needCheck():
-                data=data+ReceiveWindow.checkBuffer().parse().
-
+                data = data + ReceiveWindow.checkBuffer().parse().
 
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
         return data
+
+    def sender_time_out(self, *args):
+        print('rdt_sender_time_out: time out!')
+        seg=args[0]
+        t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
+        self.sendto(seg, self.connectAddr)
+        t.start_to_count()
+        pass
 
     def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
         """
@@ -166,17 +174,19 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+
         pieces_size = 2
-        datas = self.slice_into_pieces(byte, pieces_size)   #将包切片
-        sw = SendingWindow(pieces_size, datas)  #初始化发送窗口
+        datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
+        sw = SendingWindow(pieces_size, datas)  # 初始化发送窗口
         ack_finish = False
         for seq, seg in sw.buffer.items():  # 将窗口内的包发送
+            t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
             self.sendto(seg.getSegment(), self.connectAddr)
+            t.start_to_count()
             pass
-        while ack_finish is False:              #开始发送
+        while ack_finish is False:  # 开始发送
 
-            buffer = self._recv_from(1024)      #接受ack信息
-
+            buffer = self._recv_from(1024)  # 接受ack信息
 
             # head = buffer[:18]
             seg = segment.parse(buffer)
@@ -185,15 +195,16 @@ class RDTSocket(UnreliableSocket):
                 continue
 
             if seg.ack in sw.buffer.keys():
-                con = sw.ack(seg.ack)           #通知发送窗口接收到了包并且返回结果
-                if type(con) == list:           #返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
+                con = sw.ack(seg.ack)  # 通知发送窗口接收到了包并且返回结果
+                if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                     print('sender: start to slide send window')
                     for segg in con:
+                        t = RDTTimer(segg, self.rdt_time, self.sender_time_out)
                         self.sendto(segg, self.connectAddr)
-                elif con==True:                 #返回结果:真,说明发送完毕
-                    ack_finish=True
+                        t.start_to_count()
+                elif con == True:  # 返回结果:真,说明发送完毕
+                    ack_finish = True
                     print('sender: send finish')
-
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -238,10 +249,6 @@ class RDTSocket(UnreliableSocket):
             pieces.append(header)
 
         return pieces
-
-    def sender_time_out(self):
-        print('time_out')
-        pass
 
 
 """

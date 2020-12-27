@@ -74,7 +74,14 @@ class segment:  # 定义传输报文的格式
     #     return s.encode()
 
     def __str__(self):
-        return self.getFlag() + self.seqNumber.to_bytes() + self.ackNumber.to_bytes() + self.length.to_bytes() + self.checksum.to_bytes() + self.payloadToByte()
+        return ("sin|%d|fin|%d|ack|%d|rst|%d|\n"
+                "seqNumber: %d\n"
+                "ackNumber: %d\n"
+                "length:    %d\n"
+                "checksum:  %d\n"
+                "payload:   ")%(self.sin,self.fin,self.ack,self.rst,
+                                    self.seqNumber,self.ackNumber,self.length,self.checksum,
+                                 )
 
     def getSegment(self) -> bytes:  # 将整个报文转换为bytes
         byte = self.getFlag() + self.seqNumber.to_bytes(4, byteorder='little') + \
