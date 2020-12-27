@@ -74,6 +74,7 @@ class segment:  # 定义传输报文的格式
     #     return s.encode()
 
     def __str__(self):
+        # return ''
         return ("sin|{}|fin|{}|ack|{}|rst|{}|\n"
                 "seqNumber: {}\n"
                 "ackNumber: {}\n"
@@ -120,7 +121,7 @@ class segment:  # 定义传输报文的格式
         length = int().from_bytes(data[12:16], byteorder='little')
         checksum = int().from_bytes(data[16:18], byteorder='little')
 
-        payload = data[18:0]#.decode()  # bytes.decode(data[18:])
+        payload = data[18:]#.decode()  # bytes.decode(data[18:])
         # payload = ''
         return segment(sin=sin, fin=fin, ack=ack, rst=rst, seqNumber=seqNumber,
                        ackNumber=ackNumber, length=length, checkSum=checksum,

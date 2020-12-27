@@ -77,9 +77,9 @@ class RDTSocket(UnreliableSocket):
             if data_client.sin == 1:  # 收到连接请求
                 conn.recvSin = True
                 conn.ackNum = data_client.seqNumber + 1
-                print("receive connection request!")
+                # print("accept:receive connection request!")
                 conn.sendto(segment(sin=1, ack=1, ackNumber=conn.ackNum).getSegment(), addr_client)  # 发sin ack
-                print("send sin ack")
+                # print("accept:send sin ack")
                 while True:
                     data_client2, addr_client2 = conn.recvfrom(1024)
                     data_client2 = segment.parse(data_client2)
@@ -87,9 +87,8 @@ class RDTSocket(UnreliableSocket):
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
                         conn.connectAddr = addr_client  # 建立连接
                         conn.isConnected = True
-                        print("connection established")
+                        # print("accept:connection established")
                         conn.status.append('connect')
-                        # conn.sendto(segment(ack=1, ackNumber=data_client2.seqNumber + 1).getSegment(), addr_client)
                         self.reset()  # 重置socket
                         break
                 break
@@ -110,18 +109,18 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         self.connectAddr = address
         self.sendto(segment(sin=1).getSegment(), self.connectAddr)  # 发送请求连接报文
-        print("send connect request")
+        # print("send connect request")
         data_sever, addr_sever = self.recvfrom(1024)
-        print("receive reply!")
+        # print("receive reply!")
         data_sever = segment.parse(data_sever)
         if data_sever.ack == 1 and data_sever.sin == 1:  # and addr_sever == self.connectAddr:
             self.connectAddr = addr_sever
-            print("received ack")
+            # print("received ack")
             self.seqNum = 1
             self.ackNum = data_sever.seqNumber + 1
             self.sendto(segment(ack=1, seqNumber=self.seqNum, ackNumber=self.ackNum).getSegment(),
                         self.connectAddr)
-            print("send ack")
+            # print("send ack")
             self.status.append('connect')
             self.isConnected = True
 
@@ -148,13 +147,13 @@ class RDTSocket(UnreliableSocket):
         while self.isConnected:
             data_sever, addr_sever = self.recvfrom(1024)
             data_sever = segment.parse(data_sever)
-            print("recv:", data_sever)
+            # print("recv:", data_sever)
             if data_sever.Checksum(data_sever):  # 若收到报文的checksum正确
 
                 if rw.addSegment(seqNum=data_sever.seqNumber, segment=data_sever):  # 若报文正确添加进buffer中，回一个ack
-                    print('recv: add segment successfully')
+                    # print('recv: add segment successfully')
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
-                    print('recv: send ack', data_sever.seqNumber)
+                    # print('recv: send ack', data_sever.seqNumber)
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
             if data_sever.rst == 1 and data_sever.Checksum(data_sever):
@@ -164,10 +163,11 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
+        print(str(data))
         return data
 
     def sender_time_out(self, *args):
-        print('rdt_sender_time_out: time out!')
+        # print('rdt_sender_time_out: time out!')
         seg = args[0]
         t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
         self.sendto(seg.getSegment(), self.connectAddr)
@@ -184,15 +184,15 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
 
-        pieces_size = 2
+        pieces_size = 100
         datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
-        sw = SendingWindow(pieces_size, datas)  # 初始化发送窗口
+        sw = SendingWindow(window_size=20, datas=datas)  # 初始化发送窗口
         ack_finish = False
         for seq, seg in sw.buffer.items():  # 将窗口内的包发送
-            # t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
-            print("send:send", seg.seqNumber)
+            t = RDTTimer(seg,self.rdt_time,self.sender_time_out)
+            # print("send:send", seg.seqNumber)
             self.sendto(seg.getSegment(), self.connectAddr)
-            # t.start_to_count()
+            t.start_to_count()
             pass
         while ack_finish is False:  # 开始发送
 
@@ -207,14 +207,16 @@ class RDTSocket(UnreliableSocket):
             if seg.ackNumber in sw.buffer.keys():
                 con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
                 if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
-                    print('sender: start to slide send window')
+                    # print('sender: start to slide send window')
                     for segg in con:
                         # TODO:ADD TIME OUT
-                        print("send:send", segg.seqNumber)
+                        # print("send:send", segg.seqNumber)
+                        t = RDTTimer(seg, self.rdt_time, self.sender_time_out)
                         self.sendto(segg.getSegment(), self.connectAddr)
+                        t.start_to_count()
                 elif con == True:  # 返回结果:真,说明发送完毕
                     ack_finish = True
-                    print('sender: send finish')
+                    # print('sender: send finish')
 
         #############################################################################
         #                             END OF YOUR CODE                              #

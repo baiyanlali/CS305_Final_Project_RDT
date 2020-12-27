@@ -10,4 +10,7 @@ class RDTTimer:
 
     def start_to_count(self):
         self.t.start()
-        print('RDTTimer: start to count')
+        # print('RDTTimer: start to count')
+
+    def cancel_count(self):
+        self.t.cancel()

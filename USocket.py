@@ -42,7 +42,7 @@ class UnreliableSocket:
         data, frm = sockets[id(self)].recvfrom(bufsize)
 
         addr = bytes_to_addr(data[:8])
-        print(addr,data[:8])
+        # print(addr,data[:8])
         # return data[8:], addr
         # return data[8:], frm
         # return data, addr

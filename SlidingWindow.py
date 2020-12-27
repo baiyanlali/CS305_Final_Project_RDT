@@ -7,8 +7,12 @@ class SendingWindow:
         self.window_size = window_size  # 滑动窗口的大小
         self.window_base = window_base  # 滑动窗口的起始位置
         self.buffer = {}  # 滑动窗口内的所有值，用字典索引存储
-        for i in range(window_base, window_base + window_size):
-            self.buffer[i] = datas[i]
+        for i in range(window_base,min(window_base + window_size,len(datas))):
+            try:
+                self.buffer[i] = datas[i]
+            except IndexError:
+                # print('SendingWindow: index is {} and len of datas is {}'.format(i,len(datas)))
+                raise IndexError
 
     def ack(self, ackNum):
         """
@@ -20,17 +24,18 @@ class SendingWindow:
         win_begin = self.window_base
         win_end = self.window_base + self.window_size
         if ackNum not in range(win_begin, win_end):  # 判断ack是否在窗口内
-            print('sending_window: wrong ack num')
+            # print('sending_window: wrong ack num')
             return
         if ackNum == len(self.datas) - 1:  # 判断数据包是否传输完毕
-            print('sending_window: send over')
+            # print('sending_window: send over')
             del self.buffer[ackNum]
             return True
         self.buffer[ackNum] = None  # 将ack位置设为空
+        dataToSend = []
         while self.buffer[self.window_base] is None:  # 检测并调整窗口起始点
             del self.buffer[self.window_base]
             self.window_base += 1
-            dataToSend = []
+
 
             if self.window_base + self.window_size <= len(self.datas):
                 self.buffer[self.window_base + self.window_size - 1] = \

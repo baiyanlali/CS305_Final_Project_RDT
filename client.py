@@ -8,7 +8,7 @@ if __name__=='__main__':
 
     client = RDTSocket()
     # client = socket(AF_INET, SOCK_DGRAM) # check what python socket does
-    client.connect(('127.0.0.1', 10086))
+    client.connect(('127.0.0.1', 9999))
     # client.sendto(segment(sin=1).getSegment(),address=('127.0.0.1', 10086))
     # print(segment(sin=1).getSegment())
     # print(segment(sin=1,ack=1,seqNumber=1).getSegment())
