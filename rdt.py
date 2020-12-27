@@ -206,16 +206,17 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        # initiative close
-        if 'client' in self.status:
-            self._send_to(segment(fin=1).getSegment())
-            self._recv_from(1024)
-            self._recv_from(1024)
-            self._send_to(segment(ack=1).getSegment())
-        # passivity close
-        else:
-            # TODO: passivity close
-            pass
+
+        # # initiative close
+        # if 'client' in self.status:
+        #     self._send_to(segment(fin=1).getSegment())
+        #     self._recv_from(1024)
+        #     self._recv_from(1024)
+        #     self._send_to(segment(ack=1).getSegment())
+        # # passivity close
+        # else:
+        #     # TODO: passivity close
+        #     pass
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
