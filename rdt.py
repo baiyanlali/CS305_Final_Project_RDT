@@ -40,8 +40,6 @@ class RDTSocket(UnreliableSocket):
         self.rdt_time = 1
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
         self.pktTime = {}  # 获取发包的时间戳
-        self.max_count = 50
-        self.retrans_count = {}  # 如果重发包次数多于max_count次，则假定对方已收到包
         self.RTT = 0  # 获取首发包共使用的时间，用来进行拥塞控制
         # 计算公式 RTT = (1 - rttRate) * RTT + rttRate * SampleRTT
         self.lastSegment=0
@@ -59,7 +57,7 @@ class RDTSocket(UnreliableSocket):
         self.ackNum = 0
         self.connectAddr = None
         self.isConnected = False
-        self.lastSegment=0
+        self.lastSegment = 0
 
         self.status = []
 
@@ -158,22 +156,23 @@ class RDTSocket(UnreliableSocket):
         while self.isConnected:
             data_sever, addr_sever = self.recvfrom(bufsize)
             data_sever = segment.parse(data_sever)
-            print("recv: pkt", data_sever.seqNumber)
+            print("recv:pkt", data_sever.seqNumber)
             if data_sever.Checksum(data_sever):  # 若收到报文的checksum正确
 
                 if rw.addSegment(seqNum=data_sever.seqNumber, segment=data_sever):  # 若报文正确添加进buffer中，回一个ack
                     # print('recv: add segment successfully')
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
-                    # print('recv: send ack', data_sever.seqNumber)
+                    print(f'recv: send ack {data_sever.seqNumber}, send rst {data_sever.rst}')
+                elif rw.hasSegment(data_sever.seqNumber) or rw.checkFinish(data_sever.seqNumber):
+                    self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
             else:
                 print('\033[1;45m recv: have wrong data \033[0m')
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
             if data_sever.rst == 1 and data_sever.Checksum(data_sever):
-                # print('recv: received all segments')
-                self.lastSegment=data_sever.seqNumber
-            if rw.checkFinish(self.lastSegment) and self.lastSegment!=0:
-                print('recv: received all segments')
+                self.lastSegment = data_sever.seqNumber
+            if rw.checkFinish(self.lastSegment) and self.lastSegment != 0:
+                print('\033recv: received all segments\033')
                 # for i in range(0, 10):
                 #     self.sendto(segment(rst=1).getSegment(), self.connectAddr)
                 break
@@ -186,25 +185,10 @@ class RDTSocket(UnreliableSocket):
 
     def sender_time_out(self, *args):
         # print('rdt_sender_time_out: time out!')
-        # time.sleep(self.RTT)
+        time.sleep(self.RTT)
         self.sendto(args[0].getSegment(), self.connectAddr)
-<<<<<<< HEAD
-        seq=args[0].seqNumber
-        self.pktTime[seq] = time.time()
-        if seq in self.retrans_count:
-            self.retrans_count[seq]+=1
-            if self.retrans_count[seq]>=self.max_count:
-                self.ack_finish=True
-
-        else:
-            self.retrans_count[seq]=1
-
-        #如果重发包次数过多，就认为发包结束
-
-=======
         self.pktTime[args[0].seqNumber]=time.time()
         pass
->>>>>>> parent of 3d33abf... update recv
 
     def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
         """
@@ -221,14 +205,14 @@ class RDTSocket(UnreliableSocket):
             datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
             print('send:need to send {} pkts'.format(len(datas)))
             sw = SendingWindow(window_size=10, datas=datas, sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
-            self.ack_finish = False
+            ack_finish = False
             for seq, seg in sw.buffer.items():  # 将窗口内的包发送
                 # print("send:send", seg.seqNumber)
                 # time.sleep(self.RTT)
                 self.sendto(seg.getSegment(), self.connectAddr)
                 self.pktTime[seq] = time.time()
 
-            while self.ack_finish is False:  # 开始发送
+            while ack_finish is False:  # 开始发送
 
                 buffer, addr = self.recvfrom(1024)  # 接受ack信息
 
@@ -238,26 +222,14 @@ class RDTSocket(UnreliableSocket):
                 if segment.Checksum(seg) is False:
                     continue
 
-                # if seg.rst==1:
-                #     break
-
                 if seg.ackNumber in sw.buffer.keys():
 
-                    print("send: receive ack", seg.ackNumber, "send:self.RTT=", self.RTT)
                     con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
-
-
                     error = time.time() - self.pktTime[seg.ackNumber]
-<<<<<<< HEAD
                     self.RTT = self.RTT * (1 - self.rttRate) + self.rttRate * error
-                    sw.time_out = self.RTT
-
-
-=======
-                    self.RTT = self.RTT + (1 - self.rttRate) + self.rttRate * error
-                    print("recieve ack:",seg.ackNumber,"send:self.RTT=",self.RTT)
                     sw.time_out=self.RTT
->>>>>>> parent of 3d33abf... update recv
+
+
                     if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                         # print('sender: start to slide send window')
                         for segg in con:
@@ -267,8 +239,8 @@ class RDTSocket(UnreliableSocket):
                             self.sendto(segg.getSegment(), self.connectAddr)
                             self.pktTime[segg.seqNumber] = time.time()
 
-                    elif con:  # 返回结果:真,说明发送完毕，这个时候发送一个reset为1的空包，告诉对方所有ack都收到了
-                        self.ack_finish = True
+                    elif con:  # 返回结果:真,说明发送完毕
+                        ack_finish = True
                         # print('sender: send finish')
 
         #############################################################################

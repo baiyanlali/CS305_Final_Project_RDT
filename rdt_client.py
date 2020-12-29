@@ -1,4 +1,29 @@
-import rdt
-if __name__=="__main__":
+import rdt,time
+from Segment import segment
+if __name__ == "__main__":
     socket = rdt.RDTSocket()
-    socket.connect(('127.0.0.1',10086))
+    addr = ('127.0.0.1', 9999)
+    socket.connect(('127.0.0.1', 9999))
+    time.sleep(1)
+    socket.sendto(segment(seqNumber=0,payload=b'0').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=1,payload=b'1').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=2,payload=b'2').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=3,payload=b'3').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=5,payload=b'5').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(rst=1,seqNumber=10,payload=b'10').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=4,payload=b'4').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=6,payload=b'6').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=7,payload=b'7').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=8,payload=b'8').getSegment(),addr)
+    time.sleep(0.002)
+    socket.sendto(segment(seqNumber=9,payload=b'9').getSegment(),addr)
+    time.sleep(0.002)
