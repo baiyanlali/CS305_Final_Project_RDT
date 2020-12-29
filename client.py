@@ -29,7 +29,7 @@ if __name__ == '__main__':
         assert sum([len(slice) for slice in slices]) == len(encoded)
 
         start = time.perf_counter()
-        for i in range(count):  # send 'alice.txt' for count times
+        for i in range(100):  # send 'alice.txt' for count times
             for slice in slices:
                 client.send(slice)
                 reply = client.recv(slice_size)

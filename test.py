@@ -8,6 +8,4 @@ def time_out(*args):
 
 
 if __name__ == "__main__":
-    timer = RDTTimer.RDTTimer(segment=Segment.segment(ack=1), end_time=2, time_out=time_out)
-    timer.start_to_count()
-    print('test: can I go now ?')
+    print('\033[31;42m人之所以能，是相信能\033[0m')

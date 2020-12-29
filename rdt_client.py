@@ -1,29 +1,42 @@
-import rdt,time
+from rdt import RDTSocket
+from socket import socket, AF_INET, SOCK_STREAM, SOCK_DGRAM
+import time
+from difflib import Differ
 from Segment import segment
-if __name__ == "__main__":
-    socket = rdt.RDTSocket()
-    addr = ('127.0.0.1', 9999)
-    socket.connect(('127.0.0.1', 9999))
-    time.sleep(1)
-    socket.sendto(segment(seqNumber=0,payload=b'0').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=1,payload=b'1').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=2,payload=b'2').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=3,payload=b'3').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=5,payload=b'5').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(rst=1,seqNumber=10,payload=b'10').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=4,payload=b'4').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=6,payload=b'6').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=7,payload=b'7').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=8,payload=b'8').getSegment(),addr)
-    time.sleep(0.002)
-    socket.sendto(segment(seqNumber=9,payload=b'9').getSegment(),addr)
-    time.sleep(0.002)
+
+if __name__ == '__main__':
+
+    client = RDTSocket()
+    # client = socket(AF_INET, SOCK_DGRAM) # check what python socket does
+    client.connect(('127.0.0.1', 9999))
+    echo = b''
+    count = 5
+    slice_size = 2048
+    blocking_send = True
+
+    with open('alice.txt', 'r') as f:
+        data = f.read()
+        encoded = data.encode()
+        assert len(data) == len(encoded)
+
+    '''
+    check if your rdt pass either of the two
+    mode A may be significantly slower when slice size is small
+    '''
+    if blocking_send:
+        print('transmit in mode A, send & recv in slices')
+        slices = [encoded[i * slice_size:i * slice_size + slice_size] for i in range(len(encoded) // slice_size + 1)]
+        assert sum([len(slice) for slice in slices]) == len(encoded)
+
+        start = time.perf_counter()
+        for i in range(count):  # send 'alice.txt' for count times
+            for slice in slices:
+                client.send(slice)
+
+
+
+    print(f'transmitted {len(encoded) * count}bytes in {time.perf_counter() - start}s')
+    diff = Differ().compare((data * count).splitlines(keepends=True), echo.decode().splitlines(keepends=True))
+    for line in diff:
+        if not line.startswith('  '):  # check if data is correctly echoed
+            print(line)

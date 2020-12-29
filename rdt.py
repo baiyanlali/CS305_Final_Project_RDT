@@ -166,13 +166,13 @@ class RDTSocket(UnreliableSocket):
                 elif rw.hasSegment(data_sever.seqNumber) or rw.checkFinish(data_sever.seqNumber):
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
             else:
-                print('\033[1;45m recv: have wrong data \033[0m')
+                print('\033[31;42m recv: Wrong data occurs\033[0m')
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
             if data_sever.rst == 1 and data_sever.Checksum(data_sever):
                 self.lastSegment = data_sever.seqNumber
             if rw.checkFinish(self.lastSegment) and self.lastSegment != 0:
-                print('\033recv: received all segments\033')
+                print('\033[31;42m recv: received all segments\033[0m')
                 # for i in range(0, 10):
                 #     self.sendto(segment(rst=1).getSegment(), self.connectAddr)
                 self.lastSegment = 0
@@ -202,13 +202,13 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         if self.isConnected:
             self.pktTime.clear()  # 初始化发包时间
-            pieces_size = 100
+            pieces_size = 500
             datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
             print('send:need to send {} pkts'.format(len(datas)))
             sw = SendingWindow(window_size=10, datas=datas, sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
             ack_finish = False
             for seq, seg in sw.buffer.items():  # 将窗口内的包发送
-                # print("send:send", seg.seqNumber)
+                print("send:send pkt ", seg.seqNumber)
                 # time.sleep(self.RTT)
                 self.sendto(seg.getSegment(), self.connectAddr)
                 self.pktTime[seq] = time.time()
@@ -221,10 +221,11 @@ class RDTSocket(UnreliableSocket):
                 seg = segment.parse(buffer)
 
                 if segment.Checksum(seg) is False:
+                    print('send: Check sum false')
                     continue
 
                 if seg.ackNumber in sw.buffer.keys():
-
+                    print(f'send: seg ack number {seg.ackNumber} in sw keys {sw.buffer.keys()} and payload is {str(seg.payload)}')
                     con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
                     error = time.time() - self.pktTime[seg.ackNumber]
                     self.RTT = self.RTT * (1 - self.rttRate) + self.rttRate * error
@@ -235,13 +236,15 @@ class RDTSocket(UnreliableSocket):
                         for segg in con:
                             # TODO:ADD TIME OUT
                             # time.sleep(self.RTT)
-                            print("send:send", segg.seqNumber)
+                            print("send:send pkt ", segg.seqNumber)
                             self.sendto(segg.getSegment(), self.connectAddr)
                             self.pktTime[segg.seqNumber] = time.time()
 
-                    elif con:  # 返回结果:真,说明发送完毕
+                    elif con==True:  # 返回结果:真,说明发送完毕
                         ack_finish = True
                         # print('sender: send finish')
+                else:
+                    print(f'send: seg ack number {seg.ackNumber} not in sw keys {sw.buffer.keys()}')
 
         #############################################################################
         #                             END OF YOUR CODE                              #

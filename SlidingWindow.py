@@ -35,6 +35,7 @@ class SendingWindow:
             # print('sending_window: wrong ack num')
             return
         if ackNum == len(self.datas) - 1:  # 判断数据包是否传输完毕
+            #TODO: May cause problems
             self.receive_last=True  #最后序号包已传入，若最后序号包不是最后传入包，则之后每次传入包做检测
             all_receive = True
             for seq, seg in self.buffer.items():

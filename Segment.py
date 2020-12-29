@@ -8,7 +8,7 @@ class segment:  # 定义传输报文的格式
     表头共长为：116bit(4bit+112bit)
     """
 
-    def __init__(self, sin=0, fin=0, ack=0, rst=0, seqNumber=0, ackNumber=0, length=0, checkSum=0,
+    def __init__(self, sin=0, fin=0, ack=0, rst=0, seqNumber=0, ackNumber=0, length=0, hasCheckSum=False, checkSum=None,
                  payload: bytes = b''):  # 初始化报文
         self.sin = sin
         self.fin = fin
@@ -18,11 +18,12 @@ class segment:  # 定义传输报文的格式
         self.seqNumber = seqNumber
         self.ackNumber = ackNumber
 
-        # self.checksum = checkSum
-
         self.payload = payload
         self.length = len(payload)
-        self.getChecksum()
+        if hasCheckSum is False:
+            self.checksum = self.getChecksum()
+        else:
+            self.checksum = checkSum
 
     def getLength(self):  # 求payload的长度
         self.length = len(self.payload)
@@ -41,26 +42,28 @@ class segment:  # 定义传输报文的格式
         s = self.getFlag() + self.seqNumber.to_bytes(4, byteorder='little') + \
             self.ackNumber.to_bytes(4, byteorder='little') + \
             self.length.to_bytes(4, byteorder='little') + \
-            self.payload #self.payloadToByte()
+            self.payload  # self.payloadToByte()
         check_sum = 0
         for i in s:
             check_sum += i
         checksum = check_sum % 4294967296
-        self.checksum = check_sum
+        # print('getCheckSum: now get check sum')
         return checksum
 
     @staticmethod
     def Checksum(seg: 'segment') -> bool:
         s = seg.getFlag() + seg.seqNumber.to_bytes(4, byteorder='little') + \
             seg.ackNumber.to_bytes(4, byteorder='little') + \
-            seg.length.to_bytes(4, byteorder='little') +\
+            seg.length.to_bytes(4, byteorder='little') + \
             seg.payload
-            #+ \
-            # seg.payloadToByte()
+        # + \
+        # seg.payloadToByte()
         checksum = 0
         for i in s:
             checksum += i
         checksum = checksum % 4294967296
+
+        # print(f'\033[1;32;41m segment checksum:{seg.checksum}, segment counted:{checksum}\033[0m')
 
         return seg.checksum == checksum
 
@@ -80,15 +83,15 @@ class segment:  # 定义传输报文的格式
                 "ackNumber: {}\n"
                 "length:    {}\n"
                 "checksum:  {}\n"
-                "payload:   {}").format(self.sin,self.fin,self.ack,self.rst,
-                                    self.seqNumber,self.ackNumber,self.length,self.checksum,str(self.payload)
-                                 )
+                "payload:   {}").format(self.sin, self.fin, self.ack, self.rst,
+                                        self.seqNumber, self.ackNumber, self.length, self.checksum, str(self.payload)
+                                        )
 
     def getSegment(self) -> bytes:  # 将整个报文转换为bytes
         byte = self.getFlag() + self.seqNumber.to_bytes(4, byteorder='little') + \
                self.ackNumber.to_bytes(4, byteorder='little') + \
                self.length.to_bytes(4, byteorder='little') + \
-               self.checksum.to_bytes(2, byteorder='little') + self.payload #self.payloadToByte()
+               self.checksum.to_bytes(2, byteorder='little') + self.payload  # self.payloadToByte()
         return byte
 
     @staticmethod
@@ -98,7 +101,7 @@ class segment:  # 定义传输报文的格式
         ackNumberData = ackNumber.to_bytes(4, byteorder='little')
         lengthData = length.to_bytes(4, byteorder='little')
         checksumData = checksum.to_bytes(4, byteorder='little')
-        payloadData = payload #segment.payloadToByteStatic(payload)
+        payloadData = payload  # segment.payloadToByteStatic(payload)
 
         byte = segment.getFlagStatic(sin, fin, ack,
                                      rst) + seqNumberData \
@@ -120,11 +123,12 @@ class segment:  # 定义传输报文的格式
 
         length = int().from_bytes(data[12:16], byteorder='little')
         checksum = int().from_bytes(data[16:18], byteorder='little')
+        # print(f'checksum:{checksum}')
 
-        payload = data[18:]#.decode()  # bytes.decode(data[18:])
+        payload = data[18:]  # .decode()  # bytes.decode(data[18:])
         # payload = ''
         return segment(sin=sin, fin=fin, ack=ack, rst=rst, seqNumber=seqNumber,
-                       ackNumber=ackNumber, length=length, checkSum=checksum,
+                       ackNumber=ackNumber, length=length, hasCheckSum=True, checkSum=checksum,
                        payload=payload)
 
     def __bytes__(self):
