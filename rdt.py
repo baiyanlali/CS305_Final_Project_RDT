@@ -42,7 +42,7 @@ class RDTSocket(UnreliableSocket):
         self.pktTime = {}  # 获取发包的时间戳
         self.RTT = 0  # 获取首发包共使用的时间，用来进行拥塞控制
         # 计算公式 RTT = (1 - rttRate) * RTT + rttRate * SampleRTT
-        self.lastSegment=0
+        self.lastSegment = 0
 
         self.rttRate = 0.125  # 计算rtt时间的比率
         #############################################################################
@@ -175,7 +175,7 @@ class RDTSocket(UnreliableSocket):
                 print('\033recv: received all segments\033')
                 # for i in range(0, 10):
                 #     self.sendto(segment(rst=1).getSegment(), self.connectAddr)
-                self.lastSegment=0
+                self.lastSegment = 0
                 break
 
         #############################################################################
@@ -188,7 +188,7 @@ class RDTSocket(UnreliableSocket):
         # print('rdt_sender_time_out: time out!')
         time.sleep(self.RTT)
         self.sendto(args[0].getSegment(), self.connectAddr)
-        self.pktTime[args[0].seqNumber]=time.time()
+        self.pktTime[args[0].seqNumber] = time.time()
         pass
 
     def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
@@ -228,8 +228,7 @@ class RDTSocket(UnreliableSocket):
                     con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
                     error = time.time() - self.pktTime[seg.ackNumber]
                     self.RTT = self.RTT * (1 - self.rttRate) + self.rttRate * error
-                    sw.time_out=self.RTT
-
+                    sw.time_out = self.RTT
 
                     if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                         # print('sender: start to slide send window')
