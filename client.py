@@ -12,7 +12,7 @@ if __name__ == '__main__':
     echo = b''
     count = 5
     slice_size = 2048
-    blocking_send = True
+    blocking_send = False
 
     with open('alice.txt', 'r') as f:
         data = f.read()
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         assert sum([len(slice) for slice in slices]) == len(encoded)
 
         start = time.perf_counter()
-        for i in range(100):  # send 'alice.txt' for count times
+        for i in range(count):  # send 'alice.txt' for count times
             for slice in slices:
                 client.send(slice)
                 reply = client.recv(slice_size)

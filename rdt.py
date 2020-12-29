@@ -202,7 +202,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         if self.isConnected:
             self.pktTime.clear()  # 初始化发包时间
-            pieces_size = 500
+            pieces_size = 100
             datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
             print('send:need to send {} pkts'.format(len(datas)))
             sw = SendingWindow(window_size=10, datas=datas, sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
@@ -219,6 +219,13 @@ class RDTSocket(UnreliableSocket):
 
                 # head = buffer[:18]
                 seg = segment.parse(buffer)
+
+                #如果现在检测到对方在发，那么久改为recv模式
+                if seg.payload!=b'':
+
+                    #TODO: 保守之策
+                    data = self.recv(2048)
+                    return
 
                 if segment.Checksum(seg) is False:
                     print('send: Check sum false')

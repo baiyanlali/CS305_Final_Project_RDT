@@ -5,7 +5,7 @@ import time
 if __name__ == '__main__':
     server = RDTSocket()
     # server = socket(AF_INET, SOCK_STREAM) # check what python socket does
-    server.bind(('127.0.0.1', 9999))
+    server.bind(('127.0.0.1', 10086))
     # server.listen(0) # check what python socket does
 
     while True:
@@ -15,8 +15,8 @@ if __name__ == '__main__':
         while True:
             data = conn.recv(2048)
             if data:
-                pass
-                # conn.send(data)
+                # pass
+                conn.send(data)
             else:
                 break
         '''

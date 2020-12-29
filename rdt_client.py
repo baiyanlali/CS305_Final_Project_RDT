@@ -8,11 +8,11 @@ if __name__ == '__main__':
 
     client = RDTSocket()
     # client = socket(AF_INET, SOCK_DGRAM) # check what python socket does
-    client.connect(('127.0.0.1', 9999))
+    client.connect(('127.0.0.1', 10086))
     echo = b''
     count = 5
     slice_size = 2048
-    blocking_send = True
+    blocking_send = False
 
     with open('alice.txt', 'r') as f:
         data = f.read()
@@ -32,8 +32,22 @@ if __name__ == '__main__':
         for i in range(count):  # send 'alice.txt' for count times
             for slice in slices:
                 client.send(slice)
+                reply = client.recv(slice_size)
+                echo += reply
+    else:
+        print('transmit in mode B')
+        start = time.perf_counter()
+        for i in range(count):
+            client.send(encoded)
+            while len(echo) < len(encoded)*(i+1):
+                reply = client.recv(slice_size)
+                echo += reply
 
+    client.close()
 
+    '''
+    make sure the following is reachable
+    '''
 
     print(f'transmitted {len(encoded) * count}bytes in {time.perf_counter() - start}s')
     diff = Differ().compare((data * count).splitlines(keepends=True), echo.decode().splitlines(keepends=True))

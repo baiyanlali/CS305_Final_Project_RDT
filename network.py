@@ -17,7 +17,7 @@ def addr_to_bytes(addr):
 
 def corrupt(data: bytes) -> bytes:
     raw = list(data)
-    e = random.randint(0,1e1)
+    e = random.randint(0,1e5)
     for _ in range(0, random.randint(0, 3)):
         if e==0:
             pos = random.randint(0, len(raw) - 1)
@@ -27,7 +27,7 @@ def corrupt(data: bytes) -> bytes:
 
 
 class Server(ThreadingUDPServer):
-    def __init__(self, addr, rate=None, delay=None, corrupt=None):
+    def __init__(self, addr, rate=10240, delay=None, corrupt=None):
         super().__init__(addr, None)
         self.rate = rate
         self.buffer = 0
@@ -55,16 +55,16 @@ class Server(ThreadingUDPServer):
         to = bytes_to_addr(data[:8])
         # print(client_address, to)
         ss = segment.parse(data[8:])
-        if self.cnt >= 3:
-            data = corrupt(data)
-        sss = segment.parse(data[8:])
-        if(ss.checksum != sss.checksum):
-            print(f'{segment.getChecksum(sss)},{sss.checksum}')
+        # if self.cnt >= 3:
+        #     data = corrupt(data)
+        # sss = segment.parse(data[8:])
+        # if(ss.checksum != sss.checksum):
+        #     print(f'{segment.getChecksum(sss)},{sss.checksum}')
         socket.sendto(addr_to_bytes(client_address) + data[8:], to)
 
 
 server_address = ('127.0.0.1', 12345)
 
 if __name__ == '__main__':
-    with Server(server_address, corrupt=corrupt) as server:
+    with Server(server_address) as server:
         server.serve_forever()
