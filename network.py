@@ -23,7 +23,7 @@ def corrupt(data: bytes) -> bytes:
 
 
 class Server(ThreadingUDPServer):
-    def __init__(self, addr, rate=10240, delay=None, corrupt=None):
+    def __init__(self, addr, rate=None, delay=None, corrupt=0.0001):
         super().__init__(addr, None)
         self.rate = rate
         self.buffer = 0
@@ -40,7 +40,7 @@ class Server(ThreadingUDPServer):
     def finish_request(self, request, client_address):
         data, socket = request
         lock.acquire()
-        print(f'network:sleep time {len(data) / self.rate}')
+        #print(f'network:sleep time {len(data) / self.rate}')
         if self.rate: time.sleep(len(data) / self.rate)
         self.buffer -= 1
         lock.release()

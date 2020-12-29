@@ -83,12 +83,12 @@ class RDTSocket(UnreliableSocket):
                 conn.recvSin = True
                 conn.ackNum = data_client.seqNumber + 1
                 # print("accept:receive connection request!")
-                start_time=time.time()
+                start_time = time.time()
                 conn.sendto(segment(sin=1, ack=1, ackNumber=conn.ackNum).getSegment(), addr_client)  # 发sin ack
                 # print("accept:send sin ack")
                 while True:
                     data_client2, addr_client2 = conn.recvfrom(1024)
-                    self.RTT=time.time()-start_time # 初步确定RTT
+                    self.RTT = time.time() - start_time  # 初步确定RTT
                     data_client2 = segment.parse(data_client2)
                     # if data_client2.sin == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:  # 收到了原来的地址发来的正确报文
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
@@ -116,7 +116,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         self.connectAddr = address
         self.sendto(segment(sin=1).getSegment(), self.connectAddr)  # 发送请求连接报文
-        start_time=time.time()      # 在收发的时候计算rtt
+        start_time = time.time()  # 在收发的时候计算rtt
         # print("send connect request")
         data_sever, addr_sever = self.recvfrom(1024)
         # print("receive reply!")
@@ -126,7 +126,7 @@ class RDTSocket(UnreliableSocket):
             # print("received ack")
             self.seqNum = 1
             self.ackNum = data_sever.seqNumber + 1
-            self.RTT=time.time()-start_time # 初步计算出rtt的值
+            self.RTT = time.time() - start_time  # 初步计算出rtt的值
             self.sendto(segment(ack=1, seqNumber=self.seqNum, ackNumber=self.ackNum).getSegment(),
                         self.connectAddr)
             # print("send ack")
@@ -174,6 +174,8 @@ class RDTSocket(UnreliableSocket):
                 self.lastSegment = data_sever.seqNumber
             if rw.checkFinish(self.lastSegment) and self.lastSegment != 0:
                 print('recv: received all segments')
+                for i in range(0, 10):
+                    self.sendto(segment(rst=1).getSegment(), self.connectAddr)
                 break
 
         #############################################################################
@@ -223,14 +225,12 @@ class RDTSocket(UnreliableSocket):
 
                 if seg.ackNumber in sw.buffer.keys():
 
-                    print("recieve ack:",seg.ackNumber,"send:self.RTT=",self.RTT)
+                    print("recieve ack:", seg.ackNumber, "send:self.RTT=", self.RTT)
                     con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
-
 
                     error = time.time() - self.pktTime[seg.ackNumber]
                     self.RTT = self.RTT * (1 - self.rttRate) + self.rttRate * error
-                    sw.time_out=self.RTT
-
+                    sw.time_out = self.RTT
 
                     if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                         # print('sender: start to slide send window')
