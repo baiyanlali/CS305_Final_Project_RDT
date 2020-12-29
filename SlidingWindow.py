@@ -85,7 +85,7 @@ class SendingWindow:
                 if i in self.buffer.keys() and self.buffer[i] is not None:
                     off = time_now - self.time[i]
                     if off >= self.time_out:
-                        sender_time_out_method(self.buffer[i])
+                        sender_time_out_method(self.buffer[i],self)
                         self.time[i] = time_now
                         print('SlidingWindow_checkTimeOut: retransmit pkt{}'.format(i))
             time.sleep(0.2)
