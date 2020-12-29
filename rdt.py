@@ -42,6 +42,7 @@ class RDTSocket(UnreliableSocket):
         self.pktTime = {}  # 获取发包的时间戳
         self.RTT = 0  # 获取首发包共使用的时间，用来进行拥塞控制
         # 计算公式 RTT = (1 - rttRate) * RTT + rttRate * SampleRTT
+        self.lastSegment=0
 
         self.rttRate = 0.125  # 计算rtt时间的比率
         #############################################################################
@@ -56,6 +57,7 @@ class RDTSocket(UnreliableSocket):
         self.ackNum = 0
         self.connectAddr = None
         self.isConnected = False
+        self.lastSegment=0
 
         self.status = []
 
@@ -147,7 +149,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        rw = ReceiveWindow(windowSize=30, windowBase=0)  # TODO 估计得改
+        rw = ReceiveWindow(windowSize=50, windowBase=0)  # TODO 估计得改
         while self.isConnected:
             data_sever, addr_sever = self.recvfrom(bufsize)
             data_sever = segment.parse(data_sever)
@@ -164,6 +166,9 @@ class RDTSocket(UnreliableSocket):
                 data = data + rw.checkBuffer().payload
             if data_sever.rst == 1 and data_sever.Checksum(data_sever):
                 # print('recv: received all segments')
+                self.lastSegment=data_sever.seqNumber
+            if rw.checkFinish(self.lastSegment) and self.lastSegment!=0:
+                print('recv: received all segments')
                 break
 
         #############################################################################

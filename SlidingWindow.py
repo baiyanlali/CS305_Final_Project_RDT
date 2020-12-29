@@ -4,13 +4,13 @@ import threading
 
 
 class SendingWindow:
-    def __init__(self, window_size, datas, sender_time_out_method, window_base=0,time_out=1):
+    def __init__(self, window_size, datas, sender_time_out_method, window_base=0, time_out=1):
         self.datas = datas  # type: list # 发端全部data
         self.window_size = window_size  # 滑动窗口的大小
         self.window_base = window_base  # 滑动窗口的起始位置
         self.buffer = {}  # 滑动窗口内的所有值，用字典索引存储
         self.time = {}  # 设定进来每个包的初始时间
-        self.time_out=time_out
+        self.time_out = time_out
         for i in range(window_base, min(window_base + window_size, len(datas))):
             try:
                 self.buffer[i] = datas[i]
@@ -18,7 +18,7 @@ class SendingWindow:
             except IndexError:
                 # print('SendingWindow: index is {} and len of datas is {}'.format(i,len(datas)))
                 raise IndexError
-        thread=threading.Thread(target=self.check_time_out, args=(time_out,sender_time_out_method))
+        thread = threading.Thread(target=self.check_time_out, args=(time_out, sender_time_out_method))
         thread.start()
 
     def ack(self, ackNum):
@@ -54,16 +54,16 @@ class SendingWindow:
                 self.window_size -= 1  # 如果窗口已到达右边界，则使window_size-1以确保不越界
         return dataToSend
 
-    def check_time_out(self,time_out, sender_time_out_method):
+    def check_time_out(self, time_out, sender_time_out_method):
 
         while True:
             time_now = time.time()
-            for i in range(self.window_base, min(self.window_base +self.window_size, len(self.datas))):
+            for i in range(self.window_base, min(self.window_base + self.window_size, len(self.datas))):
                 if i in self.buffer.keys() and self.buffer[i] is not None:
-                    off=time_now-self.time[i]
-                    if off>=self.time_out:
+                    off = time_now - self.time[i]
+                    if off >= self.time_out:
                         sender_time_out_method(self.buffer[i])
-                        self.time[i]=time_now
+                        self.time[i] = time_now
                         print('SlidingWindow_checkTimeOut: retransmit pkt{}'.format(i))
             time.sleep(0.2)
             # print('check_time_out:beep')
@@ -107,6 +107,12 @@ class ReceiveWindow:  # 收端所使用的sliding window
                 return True
             else:
                 return False
+        else:
+            return False
+
+    def checkFinish(self, seqNum) -> bool:  # 检查这个包以及之前所有的包是否已经收到
+        if seqNum < self.windowBase:
+            return True
         else:
             return False
 
