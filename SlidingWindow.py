@@ -18,7 +18,7 @@ class SendingWindow:
             except IndexError:
                 # print('SendingWindow: index is {} and len of datas is {}'.format(i,len(datas)))
                 raise IndexError
-        thread=threading.Thread(target=self.check_time_out,args=(self.time_out,sender_time_out_method))
+        thread=threading.Thread(target=self.check_time_out, args=(time_out,sender_time_out_method))
         thread.start()
 
     def ack(self, ackNum):
@@ -54,16 +54,17 @@ class SendingWindow:
                 self.window_size -= 1  # 如果窗口已到达右边界，则使window_size-1以确保不越界
         return dataToSend
 
-    def check_time_out(self,time_out:int, sender_time_out_method):
-        time_now=time.time()
+    def check_time_out(self,time_out, sender_time_out_method):
+
         while True:
+            time_now = time.time()
             for i in range(self.window_base, min(self.window_base +self.window_size, len(self.datas))):
                 if i in self.buffer.keys() and self.buffer[i] is not None:
                     off=time_now-self.time[i]
-                    if off>=time_out:
+                    if off>=self.time_out:
                         sender_time_out_method(self.buffer[i])
                         self.time[i]=time_now
-                        print('SlidingWindow_checkTimeOut: retrans')
+                        print('SlidingWindow_checkTimeOut: retransmit pkt{}'.format(i))
             time.sleep(0.2)
             # print('check_time_out:beep')
 

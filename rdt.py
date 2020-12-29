@@ -39,10 +39,11 @@ class RDTSocket(UnreliableSocket):
         self.isConnected = False
         self.rdt_time = 1
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
-        self.pktTime = {}   #获取发包的时间戳
-        self.RTT = 0        #获取首发包共使用的时间，用来进行拥塞控制
+        self.pktTime = {}  # 获取发包的时间戳
+        self.RTT = 0  # 获取首发包共使用的时间，用来进行拥塞控制
+        # 计算公式 RTT = (1 - rttRate) * RTT + rttRate * SampleRTT
 
-        self.rtt
+        self.rttRate = 0.125  # 计算rtt时间的比率
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -150,7 +151,7 @@ class RDTSocket(UnreliableSocket):
         while self.isConnected:
             data_sever, addr_sever = self.recvfrom(bufsize)
             data_sever = segment.parse(data_sever)
-            # print("recv:", data_sever)
+            print("recv:pkt", data_sever.seqNumber)
             if data_sever.Checksum(data_sever):  # 若收到报文的checksum正确
 
                 if rw.addSegment(seqNum=data_sever.seqNumber, segment=data_sever):  # 若报文正确添加进buffer中，回一个ack
@@ -173,7 +174,9 @@ class RDTSocket(UnreliableSocket):
 
     def sender_time_out(self, *args):
         # print('rdt_sender_time_out: time out!')
+        # time.sleep(self.RTT)
         self.sendto(args[0].getSegment(), self.connectAddr)
+        self.pktTime[args[0].seqNumber]=time.time()
         pass
 
     def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
@@ -193,6 +196,7 @@ class RDTSocket(UnreliableSocket):
             ack_finish = False
             for seq, seg in sw.buffer.items():  # 将窗口内的包发送
                 # print("send:send", seg.seqNumber)
+                # time.sleep(self.RTT)
                 self.sendto(seg.getSegment(), self.connectAddr)
                 self.pktTime[seq] = time.time()
 
@@ -210,16 +214,19 @@ class RDTSocket(UnreliableSocket):
 
                     con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
                     error = time.time() - self.pktTime[seg.ackNumber]
-                    self.RTT=self.RTT+(1-0.125)+
+                    self.RTT = self.RTT + (1 - self.rttRate) + self.rttRate * error
+                    print("recieve ack:",seg.ackNumber,"send:self.RTT=",self.RTT)
+                    sw.time_out=self.RTT
                     if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                         # print('sender: start to slide send window')
                         for segg in con:
                             # TODO:ADD TIME OUT
-                            # print("send:send", segg.seqNumber)
-
+                            # time.sleep(self.RTT)
+                            print("send:send", segg.seqNumber)
                             self.sendto(segg.getSegment(), self.connectAddr)
+                            self.pktTime[segg.seqNumber] = time.time()
 
-                    elif con == True:  # 返回结果:真,说明发送完毕
+                    elif con:  # 返回结果:真,说明发送完毕
                         ack_finish = True
                         # print('sender: send finish')
 
