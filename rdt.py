@@ -174,8 +174,8 @@ class RDTSocket(UnreliableSocket):
                 self.lastSegment = data_sever.seqNumber
             if rw.checkFinish(self.lastSegment) and self.lastSegment != 0:
                 print('recv: received all segments')
-                for i in range(0, 10):
-                    self.sendto(segment(rst=1).getSegment(), self.connectAddr)
+                # for i in range(0, 10):
+                #     self.sendto(segment(rst=1).getSegment(), self.connectAddr)
                 break
 
         #############################################################################
@@ -186,7 +186,7 @@ class RDTSocket(UnreliableSocket):
 
     def sender_time_out(self, *args):
         # print('rdt_sender_time_out: time out!')
-        # time.sleep(self.RTT)
+        time.sleep(self.RTT)
         self.sendto(args[0].getSegment(), self.connectAddr)
         self.pktTime[args[0].seqNumber] = time.time()
         pass
