@@ -175,6 +175,7 @@ class RDTSocket(UnreliableSocket):
                 print('\033recv: received all segments\033')
                 # for i in range(0, 10):
                 #     self.sendto(segment(rst=1).getSegment(), self.connectAddr)
+                self.lastSegment=0
                 break
 
         #############################################################################
