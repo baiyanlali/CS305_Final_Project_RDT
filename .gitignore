@@ -9,3 +9,5 @@ __pycache__/USocket.cpython-37.pyc
 *.iml
 *.iml
 *.xml
+*.pyc
+*.iml
