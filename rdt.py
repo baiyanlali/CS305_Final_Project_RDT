@@ -42,7 +42,7 @@ class RDTSocket(UnreliableSocket):
         self.pktTime = {}  # 获取发包的时间戳
         self.RTT = 0  # 获取首发包共使用的时间，用来进行拥塞控制
         # 计算公式 RTT = (1 - rttRate) * RTT + rttRate * SampleRTT
-        self.lastSegment=0
+        self.lastSegment = 0
 
         self.rttRate = 0.125  # 计算rtt时间的比率
         #############################################################################
@@ -57,7 +57,7 @@ class RDTSocket(UnreliableSocket):
         self.ackNum = 0
         self.connectAddr = None
         self.isConnected = False
-        self.lastSegment=0
+        self.lastSegment = 0
 
         self.status = []
 
@@ -163,14 +163,16 @@ class RDTSocket(UnreliableSocket):
                     # print('recv: add segment successfully')
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
                     print('recv: send ack', data_sever.seqNumber)
+                    print('recv: send ack', data_sever.seqNumber)
+                elif rw.hasSegment(data_sever.seqNumber) or rw.checkFinish(data_sever.seqNumber):
+                    self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
             else:
                 print('\033[1;45m recv: have wrong data \033[0m')
             while rw.needCheck():
                 data = data + rw.checkBuffer().payload
             if data_sever.rst == 1 and data_sever.Checksum(data_sever):
-                # print('recv: received all segments')
-                self.lastSegment=data_sever.seqNumber
-            if rw.checkFinish(self.lastSegment) and self.lastSegment!=0:
+                self.lastSegment = data_sever.seqNumber
+            if rw.checkFinish(self.lastSegment) and self.lastSegment != 0:
                 print('recv: received all segments')
                 break
 
@@ -184,7 +186,7 @@ class RDTSocket(UnreliableSocket):
         # print('rdt_sender_time_out: time out!')
         # time.sleep(self.RTT)
         self.sendto(args[0].getSegment(), self.connectAddr)
-        self.pktTime[args[0].seqNumber]=time.time()
+        self.pktTime[args[0].seqNumber] = time.time()
         pass
 
     def send(self, byte: bytes):  # 发送TCP数据，将string中的数据发送到连接的套接字。返回值是要发送的字节数量，该数量可能小于string的字节大小。
