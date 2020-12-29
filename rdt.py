@@ -39,6 +39,10 @@ class RDTSocket(UnreliableSocket):
         self.isConnected = False
         self.rdt_time = 1
         self.status = []  # 说明当前状态的链表(之所以选链表是因为担心会不止一个状态)
+        self.pktTime = {}   #获取发包的时间戳
+        self.RTT = 0        #获取首发包共使用的时间，用来进行拥塞控制
+
+        self.rtt
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -182,13 +186,15 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
         if self.isConnected:
+            self.pktTime.clear()  # 初始化发包时间
             pieces_size = 100
             datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
-            sw = SendingWindow(window_size=20, datas=datas,sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
+            sw = SendingWindow(window_size=20, datas=datas, sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
             ack_finish = False
             for seq, seg in sw.buffer.items():  # 将窗口内的包发送
                 # print("send:send", seg.seqNumber)
                 self.sendto(seg.getSegment(), self.connectAddr)
+                self.pktTime[seq] = time.time()
 
             while ack_finish is False:  # 开始发送
 
@@ -203,12 +209,13 @@ class RDTSocket(UnreliableSocket):
                 if seg.ackNumber in sw.buffer.keys():
 
                     con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
+                    error = time.time() - self.pktTime[seg.ackNumber]
+                    self.RTT=self.RTT+(1-0.125)+
                     if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                         # print('sender: start to slide send window')
                         for segg in con:
                             # TODO:ADD TIME OUT
                             # print("send:send", segg.seqNumber)
-
 
                             self.sendto(segg.getSegment(), self.connectAddr)
 
