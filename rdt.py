@@ -78,16 +78,17 @@ class RDTSocket(UnreliableSocket):
             print("----- Server start listening -------")
             data_client, addr_client = self.recvfrom(1024)
             print("----- Server received -------")
-            data = data_client
             data_client = segment.parse(data_client)  # 将受到的数据解码
             if data_client.sin == 1:  # 收到连接请求
                 conn.recvSin = True
                 conn.ackNum = data_client.seqNumber + 1
                 # print("accept:receive connection request!")
+                start_time=time.time()
                 conn.sendto(segment(sin=1, ack=1, ackNumber=conn.ackNum).getSegment(), addr_client)  # 发sin ack
                 # print("accept:send sin ack")
                 while True:
                     data_client2, addr_client2 = conn.recvfrom(1024)
+                    self.RTT=time.time()-start_time # 初步确定RTT
                     data_client2 = segment.parse(data_client2)
                     # if data_client2.sin == 1 and data_client2.ack == 1 and addr_client2 == addr_client and data_client2.seqNumber == self.ackNum:  # 收到了原来的地址发来的正确报文
                     if data_client2.ack == 1 and data_client2.seqNumber == conn.ackNum and addr_client2 == addr_client:  # 收到了原来的地址发来的正确报文
@@ -115,6 +116,7 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         self.connectAddr = address
         self.sendto(segment(sin=1).getSegment(), self.connectAddr)  # 发送请求连接报文
+        start_time=time.time()      # 在收发的时候计算rtt
         # print("send connect request")
         data_sever, addr_sever = self.recvfrom(1024)
         # print("receive reply!")
@@ -124,6 +126,7 @@ class RDTSocket(UnreliableSocket):
             # print("received ack")
             self.seqNum = 1
             self.ackNum = data_sever.seqNumber + 1
+            self.RTT=time.time()-start_time # 初步计算出rtt的值
             self.sendto(segment(ack=1, seqNumber=self.seqNum, ackNumber=self.ackNum).getSegment(),
                         self.connectAddr)
             # print("send ack")
@@ -159,7 +162,7 @@ class RDTSocket(UnreliableSocket):
                 if rw.addSegment(seqNum=data_sever.seqNumber, segment=data_sever):  # 若报文正确添加进buffer中，回一个ack
                     # print('recv: add segment successfully')
                     self.sendto(segment(ackNumber=data_sever.seqNumber).getSegment(), self.connectAddr)
-                    # print('recv: send ack', data_sever.seqNumber)
+                    print('recv: send ack', data_sever.seqNumber)
             else:
                 print('\033[1;45m recv: have wrong data \033[0m')
             while rw.needCheck():
@@ -197,7 +200,8 @@ class RDTSocket(UnreliableSocket):
             self.pktTime.clear()  # 初始化发包时间
             pieces_size = 100
             datas = self.slice_into_pieces(byte, pieces_size)  # 将包切片
-            sw = SendingWindow(window_size=20, datas=datas, sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
+            print('send:need to send {} pkts'.format(len(datas)))
+            sw = SendingWindow(window_size=10, datas=datas, sender_time_out_method=self.sender_time_out)  # 初始化发送窗口
             ack_finish = False
             for seq, seg in sw.buffer.items():  # 将窗口内的包发送
                 # print("send:send", seg.seqNumber)
@@ -217,11 +221,15 @@ class RDTSocket(UnreliableSocket):
 
                 if seg.ackNumber in sw.buffer.keys():
 
-                    con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
-                    error = time.time() - self.pktTime[seg.ackNumber]
-                    self.RTT = self.RTT + (1 - self.rttRate) + self.rttRate * error
                     print("recieve ack:",seg.ackNumber,"send:self.RTT=",self.RTT)
+                    con = sw.ack(seg.ackNumber)  # 通知发送窗口接收到了包并且返回结果
+
+
+                    error = time.time() - self.pktTime[seg.ackNumber]
+                    self.RTT = self.RTT * (1 - self.rttRate) + self.rttRate * error
                     sw.time_out=self.RTT
+
+
                     if type(con) == list:  # 返回结果:链表,链表中是滑动窗口后新加入的包,将其一一发送
                         # print('sender: start to slide send window')
                         for segg in con:

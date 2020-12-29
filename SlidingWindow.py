@@ -11,6 +11,7 @@ class SendingWindow:
         self.buffer = {}  # 滑动窗口内的所有值，用字典索引存储
         self.time = {}  # 设定进来每个包的初始时间
         self.time_out = time_out
+        self.receive_last=False
         for i in range(window_base, min(window_base + window_size, len(datas))):
             try:
                 self.buffer[i] = datas[i]
@@ -34,25 +35,47 @@ class SendingWindow:
             # print('sending_window: wrong ack num')
             return
         if ackNum == len(self.datas) - 1:  # 判断数据包是否传输完毕
-            # print('sending_window: send over')
-            del self.buffer[ackNum]
-            del self.time[ackNum]
-            return True
-        self.buffer[ackNum] = None  # 将ack位置设为空
-        dataToSend = []
-        while self.buffer[self.window_base] is None:  # 检测并调整窗口起始点
-            del self.buffer[self.window_base]
-            del self.time[self.window_base]
-            self.window_base += 1
+            self.receive_last=True  #最后序号包已传入，若最后序号包不是最后传入包，则之后每次传入包做检测
+            all_receive = True
+            for seq, seg in self.buffer.items():
+                if seg is None:
+                    continue
+                else:
+                    all_receive=False
+                    break
+            if all_receive:
+                print('sending_window: send over')
+                del self.buffer[ackNum]
+                del self.time[ackNum]
+                return True
 
-            if self.window_base + self.window_size <= len(self.datas):
-                self.buffer[self.window_base + self.window_size - 1] = \
-                    self.datas[self.window_base + self.window_size - 1]
-                self.time[self.window_base + self.window_size - 1] = time.time()
-                dataToSend.append(self.datas[self.window_base + self.window_size - 1])
-            else:
-                self.window_size -= 1  # 如果窗口已到达右边界，则使window_size-1以确保不越界
-        return dataToSend
+        self.buffer[ackNum] = None  # 将ack位置设为空
+        if self.receive_last:#将每次传入的包做检测
+            is_done=True
+            for seq, seg in self.buffer.items():
+                if seg is None:
+                    pass
+                else:
+                    is_done=False
+                    break
+            if is_done:
+                print('sending_window: send over')
+                return True
+        else:
+            dataToSend = []
+            while self.buffer[self.window_base] is None:  # 检测并调整窗口起始点
+                del self.buffer[self.window_base]
+                del self.time[self.window_base]
+                self.window_base += 1
+
+                if self.window_base + self.window_size <= len(self.datas):
+                    self.buffer[self.window_base + self.window_size - 1] = \
+                        self.datas[self.window_base + self.window_size - 1]
+                    self.time[self.window_base + self.window_size - 1] = time.time()
+                    dataToSend.append(self.datas[self.window_base + self.window_size - 1])
+                else:
+                    self.window_size -= 1  # 如果窗口已到达右边界，则使window_size-1以确保不越界
+            return dataToSend
 
     def check_time_out(self, time_out, sender_time_out_method):
 
